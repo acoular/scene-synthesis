@@ -1,0 +1,17 @@
+[project]
+name = "scene-synthesis"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Art Pelling", email = "a.pelling@tu-berlin.de" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+scene-synthesis = "scene_synthesis:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
