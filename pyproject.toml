@@ -1,22 +1,27 @@
 [project]
 name = "scene-synthesis"
 version = "0.1.0"
-description = "Add your description here"
+description = "New scene-based synthesis engine for Acoular"
 readme = "README.md"
 authors = [
     { name = "Art Pelling", email = "a.pelling@tu-berlin.de" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "acoular",
+    "matplotlib>=3.10.7",
+    "pyqt6>=6.10.0",
 ]
 
-[project.scripts]
-scene-synthesis = "scene_synthesis:main"
+[dependency-groups]
+dev = [
+    "ruff>=0.14.8",
+]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-acoular = { git = "https://github.com/acoular/acoular", rev = "7688f91672c04fb390ab9d979f0961cb7283a2ab" }
+#acoular = { path = "../acoular", editable =true }
+acoular = { git = "https://github.com/acoular/acoular", rev = "42992470402b5a63f6d88abe035c40baae448691" }
