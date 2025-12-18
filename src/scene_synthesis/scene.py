@@ -1,5 +1,6 @@
 from acoular import Environment
-from scene_synthesis import Source, Microphone
+from scene_synthesis.sources import Source
+from scene_synthesis.microphones import Microphone
 from traits.api import HasStrictTraits, Instance, CList
 
 

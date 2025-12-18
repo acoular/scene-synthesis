@@ -1,4 +1,4 @@
-from scene_synthesis import Directivity
+from scene_synthesis.directivities import Directivity
 from traits.api import CArray, HasStrictTraits, Instance
 
 
