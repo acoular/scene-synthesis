@@ -25,29 +25,31 @@ class Scene(HasStrictTraits):
         raise NotImplementedError
 
     def result(self, num=128):
-        """Generate acoustic simulation result.
-        
-        Parameters
-        ----------
-        num : int, optional
-            Number of sample blocks to simulate. Default is 128.
-            
-        Returns
-        -------
-        ndarray
-            Mixed acoustic signal from all sources at microphone locations.
-        """
-        mixed_signals = np.zeros((len(self.microphones), num))
+        mixed_signals = np.zeros((num, len(self.microphones)))
+        start_times = np.zeros((len(self.sources), len(self.microphones)))
 
-        for source, source_traj in zip(self.sources, self.trajectories):
-            signal = source.signal.signal()
-            times = np.linspace(0, 1, num)  # provisionally assuming 1 second duration
-            for n, mic in enumerate(self.microphones):
-                source_locs = np.array(source_traj.location(times))
-                distances = np.linalg.norm(source_locs.T - np.array(mic.location), axis=1)
-                time_delays = distances / self.environment.c
+        for source_id, (source, source_traj) in enumerate(zip(self.sources, self.trajectories)):
+            c = self.environment.c
+            sample_freq = source.signal.sample_freq
+            signal = source.signal.signal()[:num]
+            # start_times[source_id] += 1 / sample_freq
+            
+            for mic_id, mic in enumerate(self.microphones):
+                times = start_times[source_id, mic_id] + np.arange(num) / sample_freq
+                source_locs = np.array(source_traj.location(times)).T
+                source_vels = np.array(source_traj.location(times, der=1)).T
+                relative_locs = source_locs - np.array(mic.location)
+                distances = np.linalg.norm(relative_locs, axis=1)
+                time_delays = distances / c
                 receiving_times = times + time_delays
-                squished_signal = np.interp(times, receiving_times, signal[:num] / distances, left=0, right=0)
-                mixed_signals[n] += squished_signal
+                start_times[source_id, mic_id] = times[-1] - time_delays[-1]  # this part isn't right yet
+                print(times)
+                print(time_delays)
+                print(start_times[source_id, mic_id])
+
+                radial_Mach = 0 #-(source_vels.T * relative_locs.T).sum(0) / c / distances
+                squished_signal = signal / distances / (1 - radial_Mach)**2
+                interp_signal = np.interp(times, receiving_times, squished_signal[:num], left=0, right=0)
+                mixed_signals[:, mic_id] += interp_signal
 
         return mixed_signals
