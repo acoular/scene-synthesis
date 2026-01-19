@@ -5,16 +5,17 @@ import matplotlib.pyplot as plt
 
 T = 1
 C = 343.0
-fs = 1000
+sf = 1000
+ns = 1000
 
-num = 10
+num = 500
 
 points = np.zeros((3, 1))
 mics = ac.MicGeom(pos_total=points)
 grid = ac.RectGrid(x_min=-1, x_max=1, y_min=-1, y_max=1, z=1)
 traj = ac.Trajectory(points={0: (-50, 0, 1), T: (50, 0, 1)})
-gen1 = ac.SineGenerator(freq=10, num_samples=1000, sample_freq=fs)
-gen2 = ac.SineGenerator(freq=1, num_samples=1000, sample_freq=fs, amplitude=0.5, phase=-np.pi/2)
+gen1 = ac.SineGenerator(freq=10, num_samples=ns, sample_freq=sf)
+gen2 = ac.SineGenerator(freq=1, num_samples=ns, sample_freq=sf, amplitude=0.5, phase=-np.pi/2)
 mps1 = ac.MovingPointSource(signal=gen1, trajectory=traj, mics=mics)
 mps2 = ac.MovingPointSource(signal=gen2, trajectory=traj, mics=mics)
 mix = ac.SourceMixer(sources=[mps1, mps2])
@@ -44,6 +45,6 @@ scene.sources = [source1, source2]
 scene.trajectories = [traj, traj]
 
 plt.plot(np.linspace(0, T, num), ac_res, label='Acoular Result')
-plt.plot(np.linspace(0, T, num), scene.result(num=num), label='Scene Synthesis Result')
+plt.plot(np.linspace(0, T, num), list(scene.result(num=num)), label='Scene Synthesis Result')
 plt.legend()
 plt.savefig('fly-by-result.png')
