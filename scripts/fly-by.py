@@ -8,7 +8,7 @@ C = 343.0
 sf = 1000
 ns = 1000
 
-num = 500
+num = 100
 
 points = np.zeros((3, 1))
 mics = ac.MicGeom(pos_total=points)
@@ -20,7 +20,7 @@ mps1 = ac.MovingPointSource(signal=gen1, trajectory=traj, mics=mics)
 mps2 = ac.MovingPointSource(signal=gen2, trajectory=traj, mics=mics)
 mix = ac.SourceMixer(sources=[mps1, mps2])
 
-ac_res = next(mix.result(num=num))
+ac_res = list(mix.result(num=num))
 ac_res = np.concatenate(ac_res)
 
 
@@ -44,7 +44,10 @@ scene.microphones = [mic]
 scene.sources = [source1, source2]
 scene.trajectories = [traj, traj]
 
-plt.plot(np.linspace(0, T, num), ac_res, label='Acoular Result')
-plt.plot(np.linspace(0, T, num), list(scene.result(num=num)), label='Scene Synthesis Result')
+synth_res = np.concatenate(list(scene.result(num=num)))
+
+tt = np.linspace(0, T, ns)
+plt.plot(tt, ac_res, label='Acoular Result')
+plt.plot(np.linspace(0, T, ns), synth_res, label='Scene Synthesis Result')
 plt.legend()
 plt.savefig('fly-by-result.png')
