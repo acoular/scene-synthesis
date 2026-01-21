@@ -44,10 +44,14 @@ scene.microphones = [mic]
 scene.sources = [source1, source2]
 scene.trajectories = [traj, traj]
 
-synth_res = np.concatenate(list(scene.result(num=num)))
+# synth_res = np.concatenate(list(scene.result(num=num)))
+synth_gen = scene.result(num=num)
+synth_res = next(synth_gen)
+synth_res = next(synth_gen)
+synth_res = next(synth_gen)
 
 tt = np.linspace(0, T, ns)
 plt.plot(tt, ac_res, label='Acoular Result')
-plt.plot(np.linspace(0, T, ns), synth_res, label='Scene Synthesis Result')
+plt.plot(np.linspace(0, T, num), synth_res, label='Scene Synthesis Result')
 plt.legend()
 plt.savefig('fly-by-result.png')
