@@ -55,6 +55,7 @@ class Scene(HasStrictTraits):
 
         iteration = 0
         while iteration * num < num_samples:
+            print(f"Processing iteration {iteration}")
 
             interpolation_space = receiving_time_space[iteration * num : (iteration + 1) * num]
             processed_signals = np.zeros((interpolation_space.size, len(self.microphones)))
@@ -65,17 +66,22 @@ class Scene(HasStrictTraits):
                     step = 0
                     receiving_times = np.array([])
                     distances = np.array([])
+                    radial_Machs = np.array([])
                     while not receiving_times.any() or receiving_times.max() < interpolation_space.max():
                         sending_time = (last_sending_step_matrix[source_id, mic_id] + step) / sample_freq
-                        source_locs = np.array(source_traj.location(sending_time)).T
-                        # source_vels = np.array(source_traj.location(sending_time, der=1)).T
-                        relative_locs = source_locs - np.array(mic.location)
-                        distance = np.linalg.norm(relative_locs)
+                        source_loc = np.array(source_traj.location(sending_time)).T
+                        source_vel = np.array(source_traj.location(sending_time, der=1)).T
+                        relative_loc = source_loc - np.array(mic.location)
+                        distance = np.linalg.norm(relative_loc)
                         time_delays = distance / c
                         receiving_time = sending_time + time_delays
+                        radial_Mach = np.dot(source_vel, relative_loc / distance) / c
+
                         receiving_times = np.append(receiving_times, receiving_time)
                         distances = np.append(distances, distance)
+                        radial_Machs = np.append(radial_Machs, radial_Mach)
                         step += 1
+
                     last_sending_step_matrix[source_id, mic_id] += step
 
                     # Fetch new signal samples for this iteration
@@ -84,8 +90,7 @@ class Scene(HasStrictTraits):
                     sent_signal_size_matrix[source_id, mic_id] += receiving_times.size
 
                     # Apply spherical spreading loss and Doppler effect correction
-                    radial_Mach = 0 #-(source_vels.T * relative_locs.T).sum(0) / c / distances
-                    squished_signal = signal / distances / (1 - radial_Mach)**2
+                    squished_signal = signal / distances / np.square(1 - radial_Machs) / 4 / np.pi
 
                     # Prepend last values from previous iteration if available
                     if last_receiving_times[source_id, mic_id]:
