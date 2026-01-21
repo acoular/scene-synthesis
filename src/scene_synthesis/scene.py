@@ -49,10 +49,13 @@ class Scene(HasStrictTraits):
         last_sending_step_matrix = np.zeros((len(self.sources), len(self.microphones)), dtype=int)
         sent_signal_size_matrix = np.zeros((len(self.sources), len(self.microphones)), dtype=int)
 
+        # Store last receiving time and squeezed signal for each source-mic pair
+        last_receiving_times = np.zeros((len(self.sources), len(self.microphones)), dtype=float)
+        last_squished_signals = np.zeros((len(self.sources), len(self.microphones)), dtype=float)
 
         iteration = 0
         while iteration * num < num_samples:
-            
+
             interpolation_space = receiving_time_space[iteration * num : (iteration + 1) * num]
             processed_signals = np.zeros((interpolation_space.size, len(self.microphones)))
 
@@ -79,13 +82,23 @@ class Scene(HasStrictTraits):
                     last_size = sent_signal_size_matrix[source_id, mic_id]
                     signal = source.signal.signal()[last_size : last_size + receiving_times.size]
                     sent_signal_size_matrix[source_id, mic_id] += receiving_times.size
-                    
+
                     # Apply spherical spreading loss and Doppler effect correction
                     radial_Mach = 0 #-(source_vels.T * relative_locs.T).sum(0) / c / distances
                     squished_signal = signal / distances / (1 - radial_Mach)**2
-                    
+
+                    # Prepend last values from previous iteration if available
+                    if last_receiving_times[source_id, mic_id]:
+                        receiving_times = np.concatenate([[last_receiving_times[source_id, mic_id]], receiving_times])
+                        squished_signal = np.concatenate([[last_squished_signals[source_id, mic_id]], squished_signal])
+
                     # Interpolate signal to microphone sample times
                     interp_signal = np.interp(interpolation_space, receiving_times, squished_signal, left=0, right=0)
+
+                    # Store last values for next iteration
+                    last_sample = np.searchsorted(receiving_times, interpolation_space[-1])
+                    last_receiving_times[source_id, mic_id] = receiving_times[last_sample - 1]
+                    last_squished_signals[source_id, mic_id] = squished_signal[last_sample - 1]
 
                     # Accumulate contributions from all sources
                     processed_signals[:, mic_id] += interp_signal
