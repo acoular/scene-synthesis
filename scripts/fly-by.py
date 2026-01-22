@@ -45,15 +45,11 @@ scene.microphones = [mic]
 scene.sources = [source1, source2]
 
 synth_res = np.concatenate(list(scene.result(num=num)))
-# iter = 9
-# synth_gen = scene.result(num=num)
-# for i in range(iter): synth_res = next(synth_gen)
 
 
 # Plotting
 tt = np.linspace(0, T, ns)
 plt.plot(tt, ac_res, label='Acoular Result')
 plt.plot(tt, synth_res, label='Scene Synthesis Result')
-# plt.plot(np.linspace((iter - 1) * T / 20, iter * T / 20, num), synth_res, label='Scene Synthesis Result')
 plt.legend()
 plt.savefig('fly-by-result.png')
