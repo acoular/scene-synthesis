@@ -52,7 +52,6 @@ class Scene(HasStrictTraits):
 
         iteration = 0
         while iteration * num < num_samples:
-            print(f"Processing iteration {iteration}")
 
             interpolation_space = receiving_time_space[iteration * num : (iteration + 1) * num]
             processed_signals = np.zeros((interpolation_space.size, len(self.microphones)))
