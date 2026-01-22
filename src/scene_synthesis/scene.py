@@ -17,10 +17,6 @@ class Scene(HasStrictTraits):
     #: List of sources in the scene.
     sources = CList(Instance(Source))
 
-    #: List of source locations in the scene.
-    #: To be deleted after impelementation of trajectory class.
-    trajectories = CList(Instance(Trajectory))
-
     def propagation_model(self):
         raise NotImplementedError
 
@@ -28,15 +24,16 @@ class Scene(HasStrictTraits):
         c = self.environment.c
         sample_freq = self.sources[0].signal.sample_freq
         num_samples = self.sources[0].signal.num_samples
+
         t_final = num_samples / sample_freq
         receiving_time_space = np.linspace(0, t_final, num_samples)
 
         # min_receiving_times_matrix = np.zeros((len(self.sources), len(self.microphones)))
         # max_receiving_times_matrix = np.zeros((len(self.sources), len(self.microphones)))
         # total_sending_times = np.arange(num_samples) / sample_freq
-        # for source_id, (source, source_traj) in enumerate(zip(self.sources, self.trajectories)):
+        # for source_id, source in enumerate(self.sources):
         #     for mic_id, mic in enumerate(self.microphones):
-        #         source_locs = np.array(source_traj.location(total_sending_times)).T
+        #         source_locs = np.array(source.trajectory.location(total_sending_times)).T
         #         relative_locs = source_locs - np.array(mic.location)
         #         distances = np.linalg.norm(relative_locs, axis=1)
         #         time_delays = distances / c
@@ -60,7 +57,7 @@ class Scene(HasStrictTraits):
             interpolation_space = receiving_time_space[iteration * num : (iteration + 1) * num]
             processed_signals = np.zeros((interpolation_space.size, len(self.microphones)))
 
-            for source_id, (source, source_traj) in enumerate(zip(self.sources, self.trajectories)):
+            for source_id, source in enumerate(self.sources):
                 for mic_id, mic in enumerate(self.microphones):
 
                     step = 0
@@ -69,17 +66,22 @@ class Scene(HasStrictTraits):
                     radial_Machs = np.array([])
                     while not receiving_times.any() or receiving_times.max() < interpolation_space.max():
                         sending_time = (last_sending_step_matrix[source_id, mic_id] + step) / sample_freq
-                        source_loc = np.array(source_traj.location(sending_time)).T
-                        source_vel = np.array(source_traj.location(sending_time, der=1)).T
+                        source_loc = np.array(source.trajectory.location(sending_time)).T
+                        source_vel = np.array(source.trajectory.location(sending_time, der=1)).T
                         relative_loc = source_loc - np.array(mic.location)
                         distance = np.linalg.norm(relative_loc)
                         time_delays = distance / c
                         receiving_time = sending_time + time_delays
-                        radial_Mach = np.dot(source_vel, relative_loc / distance) / c
 
                         receiving_times = np.append(receiving_times, receiving_time)
                         distances = np.append(distances, distance)
-                        radial_Machs = np.append(radial_Machs, radial_Mach)
+
+                        if source.conv_amp:
+                            radial_Mach = np.dot(source_vel, relative_loc / distance) / c
+                            radial_Machs = np.append(radial_Machs, radial_Mach)
+                        else:
+                            radial_Machs = np.append(radial_Machs, 0.0)
+
                         step += 1
 
                     last_sending_step_matrix[source_id, mic_id] += step
@@ -90,7 +92,9 @@ class Scene(HasStrictTraits):
                     sent_signal_size_matrix[source_id, mic_id] += receiving_times.size
 
                     # Apply spherical spreading loss and Doppler effect correction
-                    squished_signal = signal / distances / np.square(1 - radial_Machs) / 4 / np.pi
+                    # Someting about the normalization factor of 4 pi is wrong.
+                    # Probably has something to do with the radial Mach number.
+                    squished_signal = signal / distances / np.square(1 - radial_Machs) # / 4 / np.pi
 
                     # Prepend last values from previous iteration if available
                     if last_receiving_times[source_id, mic_id]:

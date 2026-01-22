@@ -1,4 +1,4 @@
-from acoular import SignalGenerator
+from acoular import SignalGenerator, Trajectory
 from scene_synthesis.directivities import Directivity
 from traits.api import CArray, Instance, HasStrictTraits
 import numpy as np
@@ -10,6 +10,12 @@ class Source(HasStrictTraits):
 
     #: The (initial) 3D location of the source.
     location = CArray(shape=(3,), dtype=float)
+
+    #: The trajectory of the source.
+    trajectory = Instance(Trajectory)
+
+    #: Whether to apply amplitude convection correction.
+    conv_amp = Instance(bool, value=False)
 
     #: Vectors defining the (initial) global orientation of the source
     #: These vectors must be orthogonal to each other
