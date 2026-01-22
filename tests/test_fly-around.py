@@ -1,0 +1,47 @@
+import numpy as np
+import pytest
+import scene_synthesis as synth
+import acoular as ac
+
+
+def test_fly_around_maneuver():
+    """Test that scene synthesis matches analytical solution for fly-around maneuver."""
+    
+    # Test parameters
+    c = 343.0
+    T = 10
+    signal_frequency = 0.5
+    distance = 100.0
+    num_points = 360
+    
+    # Analytical solution for fly-around maneuver
+    t = np.linspace(0, T, num_points)
+    theta = np.linspace(0, 2 * np.pi, num_points)
+    x = distance * np.cos(theta)
+    y = distance * np.sin(theta)
+    z = np.zeros(num_points)
+
+    delay = distance / c
+    sending_time = np.where(t - delay >= 0, t - delay, 0)
+    ana_result = np.sin(2 * np.pi * signal_frequency * sending_time) / distance
+
+    # Scene synthesis result
+    traj = ac.Trajectory(points={t[i]: (x[i], y[i], z[i]) for i in range(num_points)})
+    gen = ac.SineGenerator(freq=signal_frequency, num_samples=num_points, sample_freq=num_points / T)
+
+    source = synth.Source()
+    source.signal = gen
+    source.trajectory = traj
+
+    mic = synth.Microphone()
+
+    scene = synth.Scene()
+    scene.environment = ac.Environment(c=c)
+    scene.microphones = [mic]
+    scene.sources = [source]
+
+    synth_res = np.concatenate(list(scene.result(num=100)))
+
+    # Assertion
+    msg = "Scene synthesis result does not match analytical solution"
+    np.testing.assert_allclose(synth_res, ana_result,err_msg=msg)
