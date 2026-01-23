@@ -1,8 +1,9 @@
-from acoular import Environment, Trajectory
-from scene_synthesis.sources import Source
-from scene_synthesis.microphones import Microphone
-from traits.api import HasStrictTraits, Instance, CList
 import numpy as np
+from acoular import Environment
+from traits.api import CList, HasStrictTraits, Instance
+
+from scene_synthesis.microphones import Microphone
+from scene_synthesis.sources import Source
 
 
 class Scene(HasStrictTraits):
@@ -37,11 +38,11 @@ class Scene(HasStrictTraits):
         #         relative_locs = source_locs - np.array(mic.location)
         #         distances = np.linalg.norm(relative_locs, axis=1)
         #         time_delays = distances / c
-        #         min_receiving_times_matrix[source_id, mic_id] = (total_sending_times + time_delays).min()
-        #         max_receiving_times_matrix[source_id, mic_id] = (total_sending_times + time_delays).max()
+        #         min_receiving_times_matrix[source_id, mic_id] = (total_sending_times + time_delays).min() #noqa: W505
+        #         max_receiving_times_matrix[source_id, mic_id] = (total_sending_times + time_delays).max() #noqa: W505
         # first_receiving_time = min_receiving_times_matrix.min()
         # final_receiving_time = max_receiving_times_matrix.max()
-        # receiving_time_space = np.linspace(first_receiving_time, final_receiving_time, num_samples)
+        # receiving_time_space = np.linspace(first_receiving_time, final_receiving_time, num_samples) #noqa: W505
 
         last_sending_step_matrix = np.zeros((len(self.sources), len(self.microphones)), dtype=int)
         sent_signal_size_matrix = np.zeros((len(self.sources), len(self.microphones)), dtype=int)
@@ -52,13 +53,11 @@ class Scene(HasStrictTraits):
 
         iteration = 0
         while iteration * num < num_samples:
-
             interpolation_space = receiving_time_space[iteration * num : (iteration + 1) * num]
             processed_signals = np.zeros((interpolation_space.size, len(self.microphones)))
 
             for source_id, source in enumerate(self.sources):
                 for mic_id, mic in enumerate(self.microphones):
-
                     step = 0
                     receiving_times = np.array([])
                     distances = np.array([])
@@ -93,7 +92,7 @@ class Scene(HasStrictTraits):
                     # Apply spherical spreading loss and Doppler effect correction
                     # Someting about the normalization factor of 4 pi is wrong.
                     # Probably has something to do with the radial Mach number.
-                    squished_signal = signal / distances / np.square(1 - radial_Machs) # / 4 / np.pi
+                    squished_signal = signal / distances / np.square(1 - radial_Machs)  # / 4 / np.pi
 
                     # Prepend last values from previous iteration if available
                     if last_receiving_times[source_id, mic_id]:
