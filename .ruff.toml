@@ -15,6 +15,12 @@ select = [
         ]
 
 ignore = [
+    "D100",
+    "D101",
+    "D102",
+    "D104",
+    "N806",
+
     "C901", # do we want to measure code complexity -> TBD
     "COM812", # conflict with ruff formatter
     "ISC001", # conflict with ruff formatter

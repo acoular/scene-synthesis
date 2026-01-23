@@ -2,20 +2,15 @@
 
 import acoular as ac
 import numpy as np
-
 from scene_synthesis import (
-    Source,
-    Scene,
+    CardioidDirectivity,
     Microphone,
     OmniDirectivity,
-    CardioidDirectivity,
+    Scene,
+    Source,
 )
 
-
-microphones = [
-    Microphone(location=np.array([0, 5, 0]), directivity=CardioidDirectivity())
-    for x in (-1, 0, 1)
-]
+microphones = [Microphone(location=np.array([0, 5, 0]), directivity=CardioidDirectivity()) for x in (-1, 0, 1)]
 
 sources = [
     Source(

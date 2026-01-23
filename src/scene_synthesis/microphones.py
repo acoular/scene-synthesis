@@ -1,6 +1,7 @@
-from scene_synthesis.directivities import Directivity
-from traits.api import CArray, HasStrictTraits, Instance
 import numpy as np
+from traits.api import CArray, HasStrictTraits, Instance
+
+from scene_synthesis.directivities import Directivity
 
 
 class Microphone(HasStrictTraits):

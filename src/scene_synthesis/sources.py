@@ -1,7 +1,8 @@
-from acoular import SignalGenerator, Trajectory
-from scene_synthesis.directivities import Directivity
-from traits.api import CArray, Instance, HasStrictTraits
 import numpy as np
+from acoular import SignalGenerator, Trajectory
+from traits.api import CArray, HasStrictTraits, Instance
+
+from scene_synthesis.directivities import Directivity
 
 
 class Source(HasStrictTraits):

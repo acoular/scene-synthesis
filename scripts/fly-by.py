@@ -1,7 +1,9 @@
-import scene_synthesis as synth
+#!/usr/bin/env python3
+
 import acoular as ac
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import scene_synthesis as synth
 
 T = 0.5
 C = 343.0
@@ -17,7 +19,7 @@ grid = ac.RectGrid(x_min=-1, x_max=1, y_min=-1, y_max=1, z=1)
 
 traj = ac.Trajectory(points={0: (-50, 0, 1), T: (50, 0, 1)})
 gen1 = ac.SineGenerator(freq=10, num_samples=ns, sample_freq=sf)
-gen2 = ac.SineGenerator(freq=1, num_samples=ns, sample_freq=sf, amplitude=0.5, phase=-np.pi/2)
+gen2 = ac.SineGenerator(freq=1, num_samples=ns, sample_freq=sf, amplitude=0.5, phase=-np.pi / 2)
 
 mps1 = ac.MovingPointSource(signal=gen1, trajectory=traj, mics=mics)
 mps2 = ac.MovingPointSource(signal=gen2, trajectory=traj, mics=mics)
