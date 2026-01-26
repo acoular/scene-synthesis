@@ -32,9 +32,7 @@ class Scene(HasStrictTraits):
         num_samples = self.sources[0].signal.num_samples
 
         t_final = num_samples / sample_freq
-        receiving_time_space = np.linspace(0, t_final, num_samples)
-
-        return receiving_time_space
+        return np.linspace(0, t_final, num_samples)
 
     # Not used currently, but might be useful in future design choices.
     def _calculate_alt_receiving_times(self):
@@ -59,9 +57,7 @@ class Scene(HasStrictTraits):
                 max_receiving_times_matrix[source_id, mic_id] = (total_sending_times + time_delays).max()
         first_receiving_time = min_receiving_times_matrix.min()
         final_receiving_time = max_receiving_times_matrix.max()
-        receiving_time_space = np.linspace(first_receiving_time, final_receiving_time, num_samples)
-
-        return receiving_time_space
+        return np.linspace(first_receiving_time, final_receiving_time, num_samples)
 
     def _setup_new_iteration(self, source, mic, last_sending_step, final_receiving_time):
         step = 0
