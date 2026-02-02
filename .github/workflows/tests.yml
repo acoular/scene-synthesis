@@ -1,24 +1,21 @@
-name: Tests
-
+name: Acoular 👁️ Organizational CI
+permissions:
+  contents: read
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
+  coverage:
+    uses: acoular/ci/.github/workflows/coverage.yml@main
+    permissions:
+      pull-requests: write
+
+  github:
+    uses: acoular/ci/.github/workflows/github.yml@main
+
   linting:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out a copy of the repository
-        uses: actions/checkout@v5
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-      - name: Run ruff linter
-        run: uv run --dev ruff check
-      - name: Run ruff formatter
-        run: uv run --dev ruff format --check
+    uses: acoular/ci/.github/workflows/linting.yml@main
+
+  tests:
+    uses: acoular/ci/.github/workflows/tests.yml@main
