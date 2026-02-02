@@ -17,6 +17,5 @@ jobs:
   linting:
     uses: acoular/ci/.github/workflows/linting.yml@main
 
-
   tests:
     uses: acoular/ci/.github/workflows/tests.yml@main
