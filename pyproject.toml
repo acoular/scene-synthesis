@@ -15,8 +15,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "diff-cover>=10.2.0",
     "pytest>=9.0.2",
     "pytest-coverage>=0.0",
+    "pyyaml>=6.0.3",
     "ruff>=0.14.8",
 ]
 
@@ -27,3 +29,10 @@ build-backend = "hatchling.build"
 [tool.uv.sources]
 #acoular = { path = "../acoular", editable =true }
 acoular = { git = "https://github.com/acoular/acoular", rev = "42992470402b5a63f6d88abe035c40baae448691" }
+
+[tool.pytest.ini_options]
+testpaths = "tests"
+addopts = "-v --durations=10 --cov-report=html --cov-report=term-missing"
+env = [
+    "OPENBLAS_NUM_THREADS=1",
+]

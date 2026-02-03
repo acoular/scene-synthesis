@@ -6,6 +6,19 @@ from scene_synthesis.directivities import Directivity
 
 
 class Source(HasStrictTraits):
+    """Class representing an acoustic source.
+
+    Examples
+    --------
+    Instantiate a simple source with a sine signal and a default trajectory:
+
+    >>> from acoular import SineGenerator, Trajectory
+    >>> from scene_synthesis.sources import Source
+    >>> signal = SineGenerator(freq=1000, sample_freq=44100, num_samples=44100)
+    >>> trajectory = Trajectory()
+    >>> source = Source(signal=signal, trajectory=trajectory)
+    """
+
     #: The signal of the source.
     signal = Instance(SignalGenerator)
 
