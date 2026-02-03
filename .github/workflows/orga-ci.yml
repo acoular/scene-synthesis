@@ -1,0 +1,26 @@
+name: Acoular 👁️ Organizational CI
+permissions:
+  contents: read
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  coverage:
+    uses: acoular/ci/.github/workflows/coverage.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+    with:
+      src_dir: src/scene_synthesis
+
+  github:
+    uses: acoular/ci/.github/workflows/github.yml@main
+
+  linting:
+    uses: acoular/ci/.github/workflows/linting.yml@main
+
+  tests:
+    uses: acoular/ci/.github/workflows/tests.yml@main
+    with:
+      src_dir: src/scene_synthesis
