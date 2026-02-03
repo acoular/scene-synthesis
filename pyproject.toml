@@ -15,6 +15,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "diff-cover>=10.2.0",
     "pytest>=9.0.2",
     "pytest-coverage>=0.0",
     "pyyaml>=6.0.3",
