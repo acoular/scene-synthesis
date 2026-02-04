@@ -8,18 +8,20 @@ def test_fly_by_maneuver():
     """Test that scene synthesis matches analytical solution for fly-by maneuver."""
     # Test parameters
     c = 343.0
-    T = 10
-    signal_frequency = 1
-    path_length = 1000.0
+    T = 1
+    signal_frequency = 10
+    path_length = 100.0
     num_points = 10000
 
     # Analytical solution for fly-by maneuver
     # The microphone is at the origin (0,0,0)
     # The source moves along the x-axis from (-path_length/2, 0, 1) to (path_length/2, 0, 1)
+    v = path_length / T  # Source velocity
+    x_0 = -path_length / 2  # Initial x position of the source
     t = np.linspace(0, T, num_points)
-    sending_times = (c * t - path_length / 2) / (c + path_length / T)
+    sending_times = np.where(t < T / 2, (c * t + x_0) / (c - v), (c * t - x_0) / (c + v))
     sending_times = np.where(sending_times < 0, 0, sending_times)
-    distances = np.sqrt((sending_times * (path_length / T) - path_length / 2) ** 2 + 1)
+    distances = np.sqrt((sending_times * v + x_0) ** 2 + 1)
     ana_result = np.sin(2 * np.pi * signal_frequency * sending_times) / distances
 
     # Scene synthesis result
