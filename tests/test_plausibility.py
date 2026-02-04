@@ -1,22 +1,20 @@
 import numpy as np
-import acoular as ac
-import pytest
-from pytest_cases import parametrize_with_cases
-
-from tests.cases_trajectory import Trajectories
-from tests.cases_environment import Environments
+import scipy.linalg as spla
 
 
-@parametrize_with_cases('environment', Environments)
-@parametrize_with_cases('trajectory', Trajectories)
-def test_analytical(environment, trajectory):
-    """Test that analytical trajectory matches expected positions."""
-    # Test parameters
-    num_samples = 1000
-    T = 10
-    t = np.linspace(0, T, num_samples)
+def test_analytical(scene):
+    """Test that analytical solution matches synthesis result."""
+    # analytical solution
+    num_samples = scene.sources[0].signal.num_samples
+    t = np.linspace(0, 1, num_samples)
+    distance = spla.norm(scene.microphones[0].location - scene.sources[0].location)
+    delay = distance / scene.environment.c
+    sending_time = np.where(t - delay >= 0, t - delay, 0)
+    freq = scene.sources[0].signal.freq
+    solution = np.sin(2 * np.pi * freq * sending_time) / distance
 
-    if trajectory is None:
-        pytest.skip("No trajectory provided for this test case")
-    else:
-        assert isinstance(trajectory, ac.Trajectory), "Provided trajectory is not an instance of ac.Trajectory"
+    # synthesis result
+    result = np.concatenate(list(scene.result(num=128))).flatten()
+
+    msg = 'Scene synthesis result does not match analytical solution'
+    np.testing.assert_allclose(result, solution, atol=1e-6, err_msg=msg)
