@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.linalg as spla
+from scipy.optimize import fsolve
 
 
 def test_analytical(scene):
@@ -7,6 +8,7 @@ def test_analytical(scene):
     # analytical solution
     num_samples = scene.sources[0].signal.num_samples
     t = np.linspace(0, 1, num_samples)
+    sending_time = np.array([fsolve(lambda tau_0: tt - spla.norm(scene.microphones[0].location - scene.sources[0].trajectory.location(tau_0)) / scene.environment.c - tau_0, tt)[0] for tt in t])
     distance = spla.norm(scene.microphones[0].location - scene.sources[0].location)
     delay = distance / scene.environment.c
     sending_time = np.where(t - delay >= 0, t - delay, 0)
