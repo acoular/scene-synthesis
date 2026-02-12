@@ -64,8 +64,12 @@ class Scene(HasStrictTraits):
                     radial_Machs = np.array([])
                     while not receiving_times.any() or receiving_times.max() < interpolation_space.max():
                         sending_time = (last_sending_step_matrix[source_id, mic_id] + step) / sample_freq
-                        source_loc = np.array(source.trajectory.location(sending_time)).T
-                        source_vel = np.array(source.trajectory.location(sending_time, der=1)).T
+                        if source.trajectory is not None:
+                            source_loc = np.array(source.trajectory.location(sending_time)).T
+                            source_vel = np.array(source.trajectory.location(sending_time, der=1)).T
+                        else:
+                            source_loc = np.array(source.location)
+                            source_vel = np.array([0, 0, 0])
                         relative_loc = source_loc - np.array(mic.location)
                         distance = np.linalg.norm(relative_loc)
                         time_delays = distance / c

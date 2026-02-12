@@ -1,18 +1,35 @@
 import numpy as np
-import scipy.linalg as spla
 from scipy.optimize import fsolve
 
 
 def test_analytical(scene):
     """Test that analytical solution matches synthesis result."""
+
     # analytical solution
+    def arrival_time_equation(tau_0, tt):
+        if scene.sources[0].trajectory is not None:
+            source_pos = scene.sources[0].trajectory.location(tau_0)
+        else:
+            source_pos = scene.sources[0].location[:, np.newaxis]
+        mic_pos = scene.microphones[0].location[:, np.newaxis]
+        distance_to_mic = np.linalg.norm(source_pos - mic_pos)
+        c = scene.environment.c
+        return tt - distance_to_mic / c - tau_0
+
     num_samples = scene.sources[0].signal.num_samples
     t = np.linspace(0, 1, num_samples)
-    sending_time = np.array([fsolve(lambda tau_0: tt - spla.norm(scene.microphones[0].location - scene.sources[0].trajectory.location(tau_0)) / scene.environment.c - tau_0, tt)[0] for tt in t])
-    distance = spla.norm(scene.microphones[0].location - scene.sources[0].location)
-    delay = distance / scene.environment.c
-    sending_time = np.where(t - delay >= 0, t - delay, 0)
     freq = scene.sources[0].signal.freq
+
+    sending_time = np.array([fsolve(lambda tau_0, tt=tt: arrival_time_equation(tau_0, tt), tt)[0] for tt in t])
+    sending_time = np.where(sending_time < 0, 0, sending_time)
+
+    if scene.sources[0].trajectory is not None:
+        source_pos = scene.sources[0].trajectory.location(sending_time)
+    else:
+        source_pos = scene.sources[0].location[:, np.newaxis]
+    mic_pos = scene.microphones[0].location[:, np.newaxis]
+    distance = np.linalg.norm(source_pos - mic_pos, axis=0)
+
     solution = np.sin(2 * np.pi * freq * sending_time) / distance
 
     # synthesis result
