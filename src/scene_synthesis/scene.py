@@ -62,7 +62,12 @@ class Scene(HasStrictTraits):
                     receiving_times = np.array([])
                     distances = np.array([])
                     radial_Machs = np.array([])
+                    last_size = sent_signal_size_matrix[source_id, mic_id]
                     while not receiving_times.any() or receiving_times.max() < interpolation_space.max():
+                        # Check if we have signal samples available
+                        if last_size + step >= num_samples:
+                            break
+
                         sending_time = (last_sending_step_matrix[source_id, mic_id] + step) / sample_freq
                         if source.trajectory is not None:
                             source_loc = np.array(source.trajectory.location(sending_time)).T
@@ -89,7 +94,6 @@ class Scene(HasStrictTraits):
                     last_sending_step_matrix[source_id, mic_id] += step
 
                     # Fetch new signal samples for this iteration
-                    last_size = sent_signal_size_matrix[source_id, mic_id]
                     signal = source.signal.signal()[last_size : last_size + receiving_times.size]
                     sent_signal_size_matrix[source_id, mic_id] += receiving_times.size
 
