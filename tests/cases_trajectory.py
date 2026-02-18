@@ -12,7 +12,7 @@ class Trajectories:
         return None
 
     def case_static(self):
-        points = {0.0: (0.0, 0.0, 0.0), 1.0: (0.0, 0.0, 0.0)}
+        points = {0.0: (1.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)}
         return ac.Trajectory(points=points)
 
     def case_linear(self):

@@ -10,4 +10,4 @@ class Sources:
     def case_single(self, trajectory):
         N = 10000
         signal = ac.SineGenerator(freq=0.1, num_samples=N, sample_freq=N)
-        return [ss.Source(signal=signal, trajectory=trajectory)]
+        return [ss.Source(signal=signal, trajectory=trajectory, location=[1,0,0])]
