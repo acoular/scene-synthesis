@@ -15,8 +15,12 @@ class Trajectories:
         points = {0.0: (1.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)}
         return ac.Trajectory(points=points)
 
-    def case_linear(self):
+    def case_linear_pass(self):
         points = {0.0: (-1.0, -1.0, 1.0), 1.0: (1.0, 1.0, 1.0)}
+        return ac.Trajectory(points=points)
+
+    def case_linear_approach(self):
+        points = {0.0: (5.0, 0.0, 0.0), 1.0: (0.5, 0.0, 0.0)}
         return ac.Trajectory(points=points)
 
     def case_circular(self):
