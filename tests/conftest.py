@@ -1,3 +1,5 @@
+"""Pytest configuration and shared fixtures."""
+
 import scene_synthesis as ss
 from pytest_cases import fixture, parametrize_with_cases
 

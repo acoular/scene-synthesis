@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Scene instantiation with microphones and sources."""
 
 import acoular as ac
 import numpy as np

@@ -1,3 +1,5 @@
+"""Scene representation with acoustic sources and microphones."""
+
 import numpy as np
 from acoular import Environment
 from traits.api import CList, HasStrictTraits, Instance
@@ -19,9 +21,35 @@ class Scene(HasStrictTraits):
     sources = CList(Instance(Source))
 
     def propagation_model(self):
+        """Compute the propagation model for the scene."""
         raise NotImplementedError
 
     def result(self, num=128):
+        """
+        Generate synthesis result blockwise.
+
+        This method performs time-domain synthesis of audio signals received at microphone
+        locations. The synthesis is performed iteratively in blocks.
+
+        Parameters
+        ----------
+        num:  :class:`int`, optional
+            Number of samples to process per iteration. Defaults to 128.
+
+        Yields
+        ------
+        :class:`numpy.ndarray`
+            A 2D array of shape `(num, microphones.size)` containing the processed signal
+            contributions at each microphone for the current iteration. The signal is the
+            accumulated contribution from all sources after applying acoustic propagation effects.
+
+        Notes
+        -----
+        - The method assumes all sources have synchronized sample frequencies.
+        - Spherical spreading loss is applied as 1/distance attenuation.
+        - The receiving time space is derived from the first source's signal sample frequency and
+          duration, assuming all sources are synchronized.
+        """
         c = self.environment.c
         sample_freq = self.sources[0].signal.sample_freq
         num_samples = self.sources[0].signal.num_samples
@@ -61,7 +89,7 @@ class Scene(HasStrictTraits):
                     step = 0
                     receiving_times = np.array([])
                     distances = np.array([])
-                    radial_Machs = np.array([])
+                    radial_machs = np.array([])
                     last_size = sent_signal_size_matrix[source_id, mic_id]
                     while not receiving_times.any() or receiving_times.max() < interpolation_space.max():
                         # Check if we have signal samples available
@@ -84,10 +112,10 @@ class Scene(HasStrictTraits):
                         distances = np.append(distances, distance)
 
                         if source.conv_amp:
-                            radial_Mach = np.dot(source_vel, relative_loc / distance) / c
-                            radial_Machs = np.append(radial_Machs, radial_Mach)
+                            radial_mach = np.dot(source_vel, relative_loc / distance) / c
+                            radial_machs = np.append(radial_machs, radial_mach)
                         else:
-                            radial_Machs = np.append(radial_Machs, 0.0)
+                            radial_machs = np.append(radial_machs, 0.0)
 
                         step += 1
 
@@ -100,7 +128,7 @@ class Scene(HasStrictTraits):
                     # Apply spherical spreading loss and Doppler effect correction
                     # Someting about the normalization factor of 4 pi is wrong.
                     # Probably has something to do with the radial Mach number.
-                    squished_signal = signal / distances / np.square(1 - radial_Machs)  # / 4 / np.pi
+                    squished_signal = signal / distances / np.square(1 - radial_machs)  # / 4 / np.pi
 
                     # Prepend last values from previous iteration if available
                     if last_receiving_times[source_id, mic_id]:

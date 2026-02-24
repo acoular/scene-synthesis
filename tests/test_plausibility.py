@@ -1,3 +1,5 @@
+"""Plausibility tests for acoustic synthesis."""
+
 import numpy as np
 from scipy.optimize import fsolve
 
