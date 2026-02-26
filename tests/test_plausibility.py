@@ -8,11 +8,11 @@ def test_analytical(scene):
     """Test that analytical solution matches synthesis result."""
 
     # analytical solution
-    def arrival_time_equation(tau_0, tt, mic_idx):
-        if scene.sources[0].trajectory is not None:
-            source_pos = scene.sources[0].trajectory.location(tau_0)
+    def arrival_time_equation(tau_0, tt, src_idx, mic_idx):
+        if scene.sources[src_idx].trajectory is not None:
+            source_pos = scene.sources[src_idx].trajectory.location(tau_0)
         else:
-            source_pos = scene.sources[0].location[:, np.newaxis]
+            source_pos = scene.sources[src_idx].location[:, np.newaxis]
         mic_pos = scene.microphones[mic_idx].location[:, np.newaxis]
         distance_to_mic = np.linalg.norm(source_pos - mic_pos)
         c = scene.environment.c
@@ -22,23 +22,22 @@ def test_analytical(scene):
     t = np.linspace(0, 1, num_samples)
     freq = scene.sources[0].signal.freq
 
-    solutions = []
-    for mic_idx in range(len(scene.microphones)):
-        sending_time = np.array(
-            [fsolve(lambda tau_0, tt=tt, m_idx=mic_idx: arrival_time_equation(tau_0, tt, m_idx), tt)[0] for tt in t]
-        )
-        sending_time = np.where(sending_time < 0, 0, sending_time)
+    solutions = np.zeros((num_samples, len(scene.microphones)))
+    for src_idx in range(len(scene.sources)):
+        for mic_idx in range(len(scene.microphones)):
+            sending_time = np.array([fsolve(arrival_time_equation, tt, args=(tt, src_idx, mic_idx))[0] for tt in t])
+            sending_time = np.where(sending_time < 0, 0, sending_time)
 
-        if scene.sources[0].trajectory is not None:
-            source_pos = scene.sources[0].trajectory.location(sending_time)
-        else:
-            source_pos = scene.sources[0].location[:, np.newaxis]
-        mic_pos = scene.microphones[mic_idx].location[:, np.newaxis]
-        distance = np.linalg.norm(source_pos - mic_pos, axis=0)
+            if scene.sources[src_idx].trajectory is not None:
+                source_pos = scene.sources[src_idx].trajectory.location(sending_time)
+            else:
+                source_pos = scene.sources[src_idx].location[:, np.newaxis]
+            mic_pos = scene.microphones[mic_idx].location[:, np.newaxis]
+            distance = np.linalg.norm(source_pos - mic_pos, axis=0)
 
-        solutions.append(np.sin(2 * np.pi * freq * sending_time) / distance)
+            solutions[:, mic_idx] += np.sin(2 * np.pi * freq * sending_time) / distance
 
-    solution = np.array(solutions).T.flatten()
+    solution = solutions.flatten()
 
     # synthesis result
     result = np.concatenate(list(scene.result(num=128))).flatten()

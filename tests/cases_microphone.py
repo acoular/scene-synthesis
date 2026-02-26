@@ -13,4 +13,4 @@ class Microphones:
 
     def case_array(self):
         """Microphone array test case."""
-        return [ss.Microphone(location=np.array((x, y, 0))) for x, y in ((-0.5, 0), (0, 0), (0, 0.5))]
+        return [ss.Microphone(location=np.array((x, y, 0.0))) for x, y in ((0, 0), (0.5, 0.5), (-0.5, -0.5))]

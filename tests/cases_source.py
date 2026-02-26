@@ -10,9 +10,9 @@ from tests.cases_trajectory import Trajectories
 class Sources:
     """Test cases for acoustic sources."""
 
-    @parametrize_with_cases('trajectory', cases=Trajectories)
-    def case_single(self, trajectory):
+    @parametrize_with_cases('trajectories', cases=Trajectories)
+    def case_single(self, trajectories):
         """Single source test case."""
         n = 10000
         signal = ac.SineGenerator(freq=0.1, num_samples=n, sample_freq=n)
-        return [ss.Source(signal=signal, trajectory=trajectory, location=[1, 0, 0])]
+        return [ss.Source(signal=signal, trajectory=traj, location=[1, 0, 0]) for traj in trajectories]
