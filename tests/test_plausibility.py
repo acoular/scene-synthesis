@@ -34,9 +34,7 @@ def test_analytical(scene):
                 sending_time = t - distance / c
             else:
                 # Moving source: fall back to numerical root solving for each time sample.
-                sending_time = np.array(
-                    [fsolve(arrival_time_equation, tt, args=(tt, src_idx, mic_idx))[0] for tt in t]
-                )
+                sending_time = np.array([fsolve(arrival_time_equation, tt, args=(tt, src_idx, mic_idx))[0] for tt in t])
             sending_time = np.where(sending_time < 0, 0, sending_time)
 
             if scene.sources[src_idx].trajectory is not None:
