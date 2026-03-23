@@ -7,8 +7,10 @@ from traits.api import ABCHasStrictTraits
 class Directivity(ABCHasStrictTraits):
     """Base class for directivity patterns."""
 
-    def get_coefficients(self, orientation, target_directions):
+    def get_coefficients(self, orientation, target_directions):  # noqa: ARG002
         """Get directivity coefficients."""
+        msg = 'Directivity.get_coefficients must be implemented by subclasses'
+        raise NotImplementedError(msg)
 
 
 class OmniDirectivity(Directivity):

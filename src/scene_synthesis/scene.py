@@ -90,12 +90,14 @@ class Scene(HasStrictTraits):
                 for mic_id, mic in enumerate(self.microphones):
                     step = 0
                     # New samples generated in this block for this source-mic
-                    new_receiving_times = np.array([], dtype=float)
-                    new_distances = np.array([], dtype=float)
-                    new_radial_machs = np.array([], dtype=float)
+                    # pair. Use Python lists here to avoid repeated array
+                    # reallocations from ``np.append`` in the inner loop.
+                    new_receiving_times_list: list[float] = []
+                    new_distances_list: list[float] = []
+                    new_radial_machs_list: list[float] = []
                     last_size = sent_signal_size_matrix[source_id, mic_id]
 
-                    while not new_receiving_times.any() or new_receiving_times.max() < interpolation_space.max():
+                    while not new_receiving_times_list or new_receiving_times_list[-1] < interpolation_space.max():
                         # Check if we have signal samples available
                         if last_size + step >= num_samples:
                             break
@@ -112,16 +114,17 @@ class Scene(HasStrictTraits):
                         time_delays = distance / c
                         receiving_time = sending_time + time_delays
 
-                        new_receiving_times = np.append(new_receiving_times, receiving_time)
-                        new_distances = np.append(new_distances, distance)
+                        new_receiving_times_list.append(float(receiving_time))
+                        new_distances_list.append(float(distance))
 
-                        if source.conv_amp:
-                            radial_mach = np.dot(source_vel, relative_loc / distance) / c
-                            new_radial_machs = np.append(new_radial_machs, radial_mach)
-                        else:
-                            new_radial_machs = np.append(new_radial_machs, 0.0)
+                        radial_mach = float(np.dot(source_vel, relative_loc / distance) / c) if source.conv_amp else 0.0
+                        new_radial_machs_list.append(radial_mach)
 
                         step += 1
+
+                    new_receiving_times = np.array(new_receiving_times_list, dtype=float)
+                    new_distances = np.array(new_distances_list, dtype=float)
+                    new_radial_machs = np.array(new_radial_machs_list, dtype=float)
 
                     last_sending_step_matrix[source_id, mic_id] += step
 

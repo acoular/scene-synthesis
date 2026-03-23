@@ -25,7 +25,18 @@ def test_analytical(scene):
     solutions = np.zeros((num_samples, len(scene.microphones)))
     for src_idx in range(len(scene.sources)):
         for mic_idx in range(len(scene.microphones)):
-            sending_time = np.array([fsolve(arrival_time_equation, tt, args=(tt, src_idx, mic_idx))[0] for tt in t])
+            if scene.sources[src_idx].trajectory is None:
+                # Static source: use closed-form sending times instead of a root solver.
+                source_pos = scene.sources[src_idx].location[:, np.newaxis]
+                mic_pos = scene.microphones[mic_idx].location[:, np.newaxis]
+                distance = np.linalg.norm(source_pos - mic_pos)
+                c = scene.environment.c
+                sending_time = t - distance / c
+            else:
+                # Moving source: fall back to numerical root solving for each time sample.
+                sending_time = np.array(
+                    [fsolve(arrival_time_equation, tt, args=(tt, src_idx, mic_idx))[0] for tt in t]
+                )
             sending_time = np.where(sending_time < 0, 0, sending_time)
 
             if scene.sources[src_idx].trajectory is not None:
