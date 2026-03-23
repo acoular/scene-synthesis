@@ -78,14 +78,8 @@ class Scene(HasStrictTraits):
         # Carry-over receiving times and squished signals for each source-mic
         # pair. We keep a small tail of the previous block to ensure
         # numerically consistent interpolation across block boundaries.
-        carry_receiving_times = [
-            [np.array([], dtype=float) for _ in self.microphones]
-            for _ in self.sources
-        ]
-        carry_squished_signals = [
-            [np.array([], dtype=float) for _ in self.microphones]
-            for _ in self.sources
-        ]
+        carry_receiving_times = [[np.array([], dtype=float) for _ in self.microphones] for _ in self.sources]
+        carry_squished_signals = [[np.array([], dtype=float) for _ in self.microphones] for _ in self.sources]
 
         iteration = 0
         while iteration * num < num_samples:
