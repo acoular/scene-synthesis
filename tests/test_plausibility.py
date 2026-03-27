@@ -19,7 +19,8 @@ def test_analytical(scene):
         return tt - distance_to_mic / c - tau_0
 
     num_samples = scene.sources[0].signal.num_samples
-    t = np.linspace(0, 1, num_samples)
+    sample_freq = scene.sources[0].signal.sample_freq
+    t = np.arange(num_samples) / sample_freq
     freq = scene.sources[0].signal.freq
 
     solutions = np.zeros((num_samples, len(scene.microphones)))

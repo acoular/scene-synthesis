@@ -137,7 +137,7 @@ class Scene(HasStrictTraits):
                     sent_signal_size_matrix[source_id, mic_id] += new_receiving_times.size
 
                     # Apply spherical spreading loss and Doppler effect correction
-                    # Someting about the normalization factor of 4 pi is wrong.
+                    # Something about the normalization factor of 4 pi is wrong.
                     # Probably has something to do with the radial Mach number.
                     new_squished_signal = signal / new_distances / np.square(1 - new_radial_machs)  # / 4 / np.pi
 
