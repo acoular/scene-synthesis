@@ -86,6 +86,10 @@ class Scene(HasStrictTraits):
             interpolation_space = receiving_time_space[iteration * num : (iteration + 1) * num]
             processed_signals = np.zeros((interpolation_space.size, len(self.microphones)))
 
+            next_block_start_idx = (iteration + 1) * num
+            has_next_block = next_block_start_idx < receiving_time_space.size
+            next_block_start = receiving_time_space[next_block_start_idx] if has_next_block else None
+
             for source_id, source in enumerate(self.sources):
                 for mic_id, mic in enumerate(self.microphones):
                     step = 0
@@ -150,13 +154,18 @@ class Scene(HasStrictTraits):
                     # Interpolate signal to microphone sample times
                     interp_signal = np.interp(interpolation_space, receiving_times, squished_signal, left=0, right=0)
 
-                    # Store a small tail (up to two samples) for the next block
-                    if receiving_times.size >= 2:
-                        carry_receiving_times[source_id][mic_id] = receiving_times[-2:]
-                        carry_squished_signals[source_id][mic_id] = squished_signal[-2:]
-                    elif receiving_times.size == 1:
-                        carry_receiving_times[source_id][mic_id] = receiving_times[-1:]
-                        carry_squished_signals[source_id][mic_id] = squished_signal[-1:]
+                    # Keep only the carry-over points that are still relevant for
+                    # the next interpolation block. For correctness, retain the
+                    # sample directly before the next block start (if available)
+                    # plus all later samples.
+                    if not has_next_block:
+                        carry_receiving_times[source_id][mic_id] = np.array([], dtype=float)
+                        carry_squished_signals[source_id][mic_id] = np.array([], dtype=float)
+                    elif receiving_times.size:
+                        first_future_idx = np.searchsorted(receiving_times, next_block_start, side='left')
+                        keep_from = max(first_future_idx - 1, 0)
+                        carry_receiving_times[source_id][mic_id] = receiving_times[keep_from:]
+                        carry_squished_signals[source_id][mic_id] = squished_signal[keep_from:]
                     else:
                         carry_receiving_times[source_id][mic_id] = np.array([], dtype=float)
                         carry_squished_signals[source_id][mic_id] = np.array([], dtype=float)
