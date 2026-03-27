@@ -54,8 +54,7 @@ class Scene(HasStrictTraits):
         sample_freq = self.sources[0].signal.sample_freq
         num_samples = self.sources[0].signal.num_samples
 
-        t_final = num_samples / sample_freq
-        receiving_time_space = np.linspace(0, t_final, num_samples)
+        receiving_time_space = np.arange(num_samples) / sample_freq
 
         # min_receiving_times_matrix = np.zeros((len(self.sources), len(self.microphones)))
         # max_receiving_times_matrix = np.zeros((len(self.sources), len(self.microphones)))
