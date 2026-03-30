@@ -54,7 +54,8 @@ class Environment(HasStrictTraits):
             Coordinates of the first set of points with shape ``(3, N)``.
         mpos : :class:`float` or :class:`numpy.ndarray`, optional
             Coordinates of the second set of points. A scalar is interpreted
-            as the origin ``(0, 0, 0)``. Array input must have shape ``(3, M)``.
+            as the origin ``(0, 0, 0)``. Array input may have shape ``(3,)``
+            for a single point or ``(3, M)`` for multiple points.
 
         Returns
         -------
@@ -64,6 +65,20 @@ class Environment(HasStrictTraits):
         """
         if np.isscalar(mpos):
             mpos = np.array((0.0, 0.0, 0.0), dtype=np.float64)[:, np.newaxis]
+        else:
+            mpos = np.asarray(mpos, dtype=np.float64)
+            if mpos.ndim == 1:
+                if mpos.shape[0] != 3:
+                    msg = f'mpos must have length 3 when passed as a 1D array; got shape {mpos.shape}'
+                    raise ValueError(msg)
+                mpos = mpos[:, np.newaxis]
+            elif mpos.ndim == 2:
+                if mpos.shape[0] != 3:
+                    msg = f'mpos must have shape (3, M); got shape {mpos.shape}'
+                    raise ValueError(msg)
+            else:
+                msg = f'mpos must be a scalar, shape (3,), or shape (3, M); got shape {mpos.shape}'
+                raise ValueError(msg)
 
         distances = dist_mat(np.ascontiguousarray(gpos), np.ascontiguousarray(mpos))
         if distances.shape[1] == 1:

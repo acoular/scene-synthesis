@@ -28,6 +28,18 @@ def test_environment_spread_is_inverse_distance():
     np.testing.assert_allclose(spread, np.array([0.5]))
 
 
+def test_environment_accepts_single_microphone_position_as_1d_array():
+    """``Environment._r`` should accept a single microphone position as ``(3,)``."""
+    environment = ss.Environment(c=343.0)
+
+    spos = np.array([[1.0], [0.0], [0.0]])
+    mpos = np.array([0.0, 0.0, 0.0])
+
+    distances = environment.apparent_r(spos, mpos)
+
+    np.testing.assert_allclose(distances, np.array([1.0]))
+
+
 def test_environment_spread_supports_multiple_microphones():
     """``Environment.spread`` should broadcast over multiple microphone positions."""
     environment = ss.Environment(c=343.0)
