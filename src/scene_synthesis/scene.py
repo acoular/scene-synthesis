@@ -1,7 +1,7 @@
 import numpy as np
-from acoular import Environment
 from traits.api import CList, HasStrictTraits, Instance
 
+from scene_synthesis.environments import Environment
 from scene_synthesis.microphones import Microphone
 from scene_synthesis.sources import Source
 

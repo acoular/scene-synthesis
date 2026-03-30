@@ -35,7 +35,7 @@ def test_fly_around_maneuver():
     mic = synth.Microphone()
 
     scene = synth.Scene()
-    scene.environment = ac.Environment(c=c)
+    scene.environment = synth.Environment(c=c)
     scene.microphones = [mic]
     scene.sources = [source]
 
