@@ -5,7 +5,22 @@ from scipy.optimize import fsolve
 
 
 def test_analytical(scene):
-    """Test that analytical solution matches synthesis result."""
+    """
+    Test that the analytical solution matches the synthesis result for acoustic scenes.
+
+    This test computes the expected microphone signals for static and moving sources analytically,
+    and compares them to the synthesized output of the scene.
+
+    Parameters
+    ----------
+    scene : Scene
+        An instance containing sources, microphones, and environment information.
+
+    Raises
+    ------
+    AssertionError
+        If the analytical and synthesized results do not match within the specified tolerance.
+    """
 
     # analytical solution
     def arrival_time_equation(tau_0, tt, src_idx, mic_idx):
