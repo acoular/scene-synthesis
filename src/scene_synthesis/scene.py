@@ -11,7 +11,7 @@ from scene_synthesis.sources import Source
 class Scene(HasStrictTraits):
     """Class representing a scene with multiple acoustic sources."""
 
-    #: Envrionment of the scene.
+    #: Environment of the scene.
     environment = Instance(Environment)
 
     #: List of microphones in the scene.
@@ -26,7 +26,7 @@ class Scene(HasStrictTraits):
 
     def result(self, num=128):
         """
-        Generate synthesis result blockwise.
+        Generate synthesis result block-wise.
 
         This method performs time-domain synthesis of audio signals received at microphone
         locations. The synthesis is performed iteratively in blocks.
