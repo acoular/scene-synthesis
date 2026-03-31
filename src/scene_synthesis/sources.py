@@ -1,3 +1,5 @@
+"""Acoustic source definition and properties."""
+
 import numpy as np
 from acoular import SignalGenerator, Trajectory
 from traits.api import CArray, HasStrictTraits, Instance

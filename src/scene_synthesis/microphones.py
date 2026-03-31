@@ -1,3 +1,5 @@
+"""Microphone model and properties."""
+
 import numpy as np
 from traits.api import CArray, HasStrictTraits, Instance
 
@@ -5,6 +7,8 @@ from scene_synthesis.directivities import Directivity
 
 
 class Microphone(HasStrictTraits):
+    """Acoustic microphone with location, orientation, and directivity."""
+
     #: The 3D location of the microphone.
     location = CArray(shape=(3,), dtype=float)
 
