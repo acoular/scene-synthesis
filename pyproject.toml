@@ -28,6 +28,12 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+
+[tool.basedpyright]
+venv = ".venv"
+typeCheckingMode = 'off'
+
+
 [tool.uv.sources]
 #acoular = { path = "../acoular", editable =true }
 acoular = { git = "https://github.com/acoular/acoular", rev = "42992470402b5a63f6d88abe035c40baae448691" }
