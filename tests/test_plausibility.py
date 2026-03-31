@@ -67,4 +67,4 @@ def test_analytical(scene):
     result = np.concatenate(list(scene.result(num=128))).flatten()
 
     msg = 'Scene synthesis result does not match analytical solution'
-    np.testing.assert_allclose(result, solution, atol=1e-6, err_msg=msg)
+    np.testing.assert_allclose(result, solution, atol=1e-11, err_msg=msg)

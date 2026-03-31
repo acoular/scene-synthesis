@@ -2,6 +2,7 @@
 
 import numpy as np
 from acoular import Environment
+from scipy.interpolate import CubicSpline
 from traits.api import CList, HasStrictTraits, Instance
 
 from scene_synthesis.microphones import Microphone
@@ -23,6 +24,19 @@ class Scene(HasStrictTraits):
     def propagation_model(self):
         """Compute the propagation model for the scene."""
         raise NotImplementedError
+
+    def _interpolate_block_signal(self, interpolation_space, receiving_times, squished_signal):
+        """Interpolate one propagated signal block onto microphone sample times.
+
+        A cubic spline is used when enough support points are available,
+        otherwise linear interpolation is used as a fallback.
+        """
+        if receiving_times.size >= 4:
+            spline = CubicSpline(receiving_times, squished_signal, extrapolate=False)
+            interp_signal = spline(interpolation_space)
+            return np.where(np.isnan(interp_signal), 0.0, interp_signal)
+
+        return np.interp(interpolation_space, receiving_times, squished_signal, left=0.0, right=0.0)
 
     def result(self, num=128):
         """
@@ -150,8 +164,10 @@ class Scene(HasStrictTraits):
                         receiving_times = new_receiving_times
                         squished_signal = new_squished_signal
 
-                    # Interpolate signal to microphone sample times
-                    interp_signal = np.interp(interpolation_space, receiving_times, squished_signal, left=0, right=0)
+                    # Interpolate signal to microphone sample times.
+                    interp_signal = self._interpolate_block_signal(
+                        interpolation_space, receiving_times, squished_signal
+                    )
 
                     # Keep only the carry-over points that are still relevant for
                     # the next interpolation block. For correctness, retain the
