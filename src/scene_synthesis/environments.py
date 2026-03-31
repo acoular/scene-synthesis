@@ -19,8 +19,8 @@ def dist_mat(gpos, mpos):
     :class:`numpy.ndarray`
         Distance matrix with shape ``(N, M)``.
     """
-    _, mics = mpos.shape
-    _, points = gpos.shape
+    mics = mpos.shape[1]
+    points = gpos.shape[1]
     distances = np.empty((points, mics), dtype=np.result_type(gpos, mpos, np.float64))
 
     for point_idx in range(points):
@@ -45,7 +45,7 @@ class Environment(HasStrictTraits):
     #: Region of interest for calculations. Reserved for future use.
     roi = Union(None, CArray)
 
-    def _r(self, gpos, mpos=0.0):
+    def _apparent_r(self, gpos, mpos=0.0):
         """Compute apparent distances between source and microphone positions.
 
         Parameters
@@ -87,7 +87,7 @@ class Environment(HasStrictTraits):
 
     def apparent_r(self, spos, mpos=0.0):
         """Return apparent propagation distances between source and mic positions."""
-        return self._r(spos, mpos)
+        return self._apparent_r(spos, mpos)
 
     def spread(self, spos, mpos=0.0):
         """Return geometric spreading factors for source-mic pairs.
