@@ -1,3 +1,5 @@
+"""Scene synthesis package for acoustic scene simulation."""
+
 from .directivities import CardioidDirectivity as CardioidDirectivity
 from .directivities import OmniDirectivity as OmniDirectivity
 from .environments import Environment as Environment

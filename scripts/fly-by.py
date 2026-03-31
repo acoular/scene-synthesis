@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Generate fly-by microphone array visualization."""
 
 import acoular as ac
 import matplotlib.pyplot as plt
