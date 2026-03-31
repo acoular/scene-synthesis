@@ -38,6 +38,28 @@ class Scene(HasStrictTraits):
 
         return np.interp(interpolation_space, receiving_times, squished_signal, left=0.0, right=0.0)
 
+    def _source_state(self, source, sending_time):
+        """Return source position and velocity at one sending time."""
+        if source.trajectory is not None:
+            source_loc = np.array(source.trajectory.location(sending_time)).T
+            source_vel = np.array(source.trajectory.location(sending_time, der=1)).T
+        else:
+            source_loc = np.array(source.location)
+            source_vel = np.array([0, 0, 0])
+
+        return source_loc, source_vel
+
+    def _propagation_sample(self, source, source_loc, source_vel, mic):
+        """Return propagation quantities for one source-microphone sample."""
+        c = self.environment.c
+        mic_loc = np.array(mic.location)
+        relative_loc = source_loc - mic_loc
+        source_pos = np.asarray(source_loc, dtype=float).reshape(3, -1)
+        distance = float(np.asarray(self.environment.apparent_r(source_pos, mic_loc)).reshape(-1)[0])
+        spread = float(np.asarray(self.environment.spread(source_pos, mic_loc)).reshape(-1)[0])
+        radial_mach = float(np.dot(source_vel, relative_loc / distance) / c) if source.conv_amp else 0.0
+        return distance, spread, radial_mach
+
     def result(self, num=128):
         """
         Generate synthesis result block-wise.
@@ -120,24 +142,13 @@ class Scene(HasStrictTraits):
                             break
 
                         sending_time = (last_sending_step_matrix[source_id, mic_id] + step) / sample_freq
-                        if source.trajectory is not None:
-                            source_loc = np.array(source.trajectory.location(sending_time)).T
-                            source_vel = np.array(source.trajectory.location(sending_time, der=1)).T
-                        else:
-                            source_loc = np.array(source.location)
-                            source_vel = np.array([0, 0, 0])
-                        mic_loc = np.array(mic.location)
-                        relative_loc = source_loc - mic_loc
-                        source_pos = np.asarray(source_loc, dtype=float).reshape(3, -1)
-                        distance = float(np.asarray(self.environment.apparent_r(source_pos, mic_loc)).reshape(-1)[0])
-                        spread = float(np.asarray(self.environment.spread(source_pos, mic_loc)).reshape(-1)[0])
+                        source_loc, source_vel = self._source_state(source, sending_time)
+                        distance, spread, radial_mach = self._propagation_sample(source, source_loc, source_vel, mic)
                         time_delays = distance / c
                         receiving_time = sending_time + time_delays
 
                         new_receiving_times_list.append(float(receiving_time))
                         new_spreads_list.append(spread)
-
-                        radial_mach = float(np.dot(source_vel, relative_loc / distance) / c) if source.conv_amp else 0.0
                         new_radial_machs_list.append(radial_mach)
 
                         step += 1
