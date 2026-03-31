@@ -10,7 +10,7 @@ def _single_case_scene():
     signal = ac.SineGenerator(freq=0.1, num_samples=10000, sample_freq=10000)
     source = ss.Source(signal=signal, trajectory=None, location=[1, 0, 0])
     microphone = ss.Microphone(location=np.array((0, 0, 0)))
-    environment = ac.Environment(c=343.0)
+    environment = ss.Environment(c=343.0)
     return ss.Scene(environment=environment, microphones=[microphone], sources=[source])
 
 
