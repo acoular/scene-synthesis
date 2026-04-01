@@ -106,9 +106,11 @@ class Trajectory(HasStrictTraits):
         --------
         >>> import scene_synthesis as ss
         >>> trajectory = ss.Trajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
-        >>> list(trajectory.traj(0.5))
-        [(np.float64(0.0), np.float64(0.0), np.float64(0.0)),
-         (np.float64(0.5), np.float64(0.0), np.float64(0.0))]
+        >>> samples = list(trajectory.traj(0.5))
+        >>> samples[0]
+        (np.float64(0.0), np.float64(0.0), np.float64(0.0))
+        >>> samples[1]
+        (np.float64(0.5), np.float64(0.0), np.float64(0.0))
         >>> samples = list(trajectory.traj(0.0, 1.0, 0.5))
         >>> samples[0]
         (np.float64(0.0), np.float64(0.0), np.float64(0.0))
