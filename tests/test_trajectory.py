@@ -1,6 +1,7 @@
 """Unit tests for the scene-synthesis trajectory class."""
 
 import numpy as np
+import pytest
 import scene_synthesis as ss
 
 
@@ -29,3 +30,11 @@ def test_trajectory_traj_iterates_over_requested_range():
     assert len(samples) == 4
     np.testing.assert_allclose(samples[0], (0.0, 0.0, 0.0))
     np.testing.assert_allclose(samples[-1], (0.75, 0.0, 0.0))
+
+
+def test_trajectory_location_requires_at_least_two_points():
+    """``Trajectory.location`` should raise a clear error for underspecified splines."""
+    trajectory = ss.Trajectory(points={0.0: (0.0, 0.0, 0.0)})
+
+    with pytest.raises(ValueError, match='at least two sampled positions'):
+        trajectory.location(0.0)

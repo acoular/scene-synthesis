@@ -43,12 +43,16 @@ class Trajectory(HasStrictTraits):
     @property_depends_on(['points[]'])
     def _get_interval(self):
         if not self.points:
-            raise ValueError("Trajectory.points must contain at least one sampled position to compute an interval.")
+            msg = 'Trajectory.points must contain at least one sampled position to compute an interval.'
+            raise ValueError(msg)
         return np.sort(list(self.points.keys()))[np.r_[0, -1]]
 
     @cached_property
     @property_depends_on(['points[]'])
     def _get_tck(self):
+        if len(self.points) < 2:
+            msg = 'Trajectory.points must contain at least two sampled positions to build a spline.'
+            raise ValueError(msg)
         t = np.sort(list(self.points.keys()))
         xp = np.array([self.points[i] for i in t]).T
         k = min(3, len(self.points) - 1)
@@ -124,7 +128,8 @@ class Trajectory(HasStrictTraits):
             delta_t = t_start
             t_start, t_end = self.interval
         if delta_t <= 0:
-            raise ValueError("delta_t must be a positive time step.")
+            msg = 'delta_t must be a positive time step.'
+            raise ValueError(msg)
         if t_end is None:
             t_end = self.interval[1]
         yield from zip(*self.location(np.arange(t_start, t_end, delta_t), der), strict=True)
