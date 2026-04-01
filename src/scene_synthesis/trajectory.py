@@ -42,6 +42,8 @@ class Trajectory(HasStrictTraits):
 
     @property_depends_on(['points[]'])
     def _get_interval(self):
+        if not self.points:
+            raise ValueError("Trajectory.points must contain at least one sampled position to compute an interval.")
         return np.sort(list(self.points.keys()))[np.r_[0, -1]]
 
     @cached_property
@@ -117,9 +119,12 @@ class Trajectory(HasStrictTraits):
         >>> samples[1]
         (np.float64(0.5), np.float64(0.0), np.float64(0.0))
         """
-        if not delta_t:
+        if delta_t is None:
+            # Interpret t_start as the step size and use the full trajectory interval.
             delta_t = t_start
             t_start, t_end = self.interval
-        if not t_end:
+        if delta_t <= 0:
+            raise ValueError("delta_t must be a positive time step.")
+        if t_end is None:
             t_end = self.interval[1]
         yield from zip(*self.location(np.arange(t_start, t_end, delta_t), der), strict=True)
