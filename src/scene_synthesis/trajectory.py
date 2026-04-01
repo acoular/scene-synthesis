@@ -1,10 +1,4 @@
-"""Trajectory definitions for scene synthesis.
-
-This module separates the abstract trajectory interface from the current
-fixed-frame implementation. That keeps the existing point-trajectory use case
-available while leaving room for future motion models with moving local
-reference frames.
-"""
+"""Trajectory definitions for scene synthesis."""
 
 import numpy as np
 from scipy.interpolate import splev, splprep
