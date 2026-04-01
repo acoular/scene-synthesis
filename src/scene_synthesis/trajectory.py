@@ -45,6 +45,7 @@ class Trajectory(HasStrictTraits):
         return np.sort(list(self.points.keys()))[np.r_[0, -1]]
 
     @cached_property
+    @property_depends_on(['points[]'])
     def _get_tck(self):
         t = np.sort(list(self.points.keys()))
         xp = np.array([self.points[i] for i in t]).T
@@ -84,16 +85,15 @@ class Trajectory(HasStrictTraits):
         Parameters
         ----------
         t_start : float
-            Start time of the iteration. If only one or two positional
-            arguments are used, this is interpreted as the step size.
+            Start time of the iteration. If ``delta_t`` is omitted, this value
+            is interpreted as the step size and the full trajectory interval is
+            used.
         t_end : float, optional
-            End time of the iteration. With two positional arguments, this is
-            the end time and the trajectory start defaults to
-            ``self.interval[0]``. Otherwise it defaults to the end of
+            End time of the iteration. Defaults to the end of
             :attr:`interval`.
         delta_t : float, optional
             Time step between yielded samples. If omitted, ``t_start`` is used
-            as the step size.
+            as the step size for traversing the full trajectory interval.
         der : int, optional
             Derivative order to evaluate. Defaults to ``0``.
 
