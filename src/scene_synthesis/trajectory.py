@@ -123,7 +123,14 @@ class FixedTrajectory(Trajectory):
             Shifted trajectory with the same time samples.
         """
         offset = np.asarray(x_off, dtype=float)
-        shifted_points = {time: tuple(np.asarray(point, dtype=float) + offset) for time, point in self.points.items()}
+        # Validate that the offset is a 3D vector to avoid ambiguous NumPy broadcasting.
+        if offset.shape != (3,):
+            msg = f"x_off must be an array-like of shape (3,), got {offset.shape} instead."
+            raise ValueError(msg)
+        shifted_points = {
+            time: tuple(np.asarray(point, dtype=float) + offset)
+            for time, point in self.points.items()
+        }
         return FixedTrajectory(points=shifted_points)
 
     def traj(self, t_start, t_end=None, delta_t=None, der=0):
