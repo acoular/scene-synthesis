@@ -1,6 +1,6 @@
 """Test cases for acoustic environments."""
 
-import acoular as ac
+import scene_synthesis as ss
 from pytest_cases import parametrize
 
 
@@ -13,7 +13,7 @@ class Environments:
     @parametrize('c', [343.0, 300.0])
     def case_free_field(self, c):
         """Free field environment test case."""
-        return ac.Environment(c=c)
+        return ss.Environment(c=c)
 
     # def case_half_space(self):
     #     pass

@@ -1,10 +1,10 @@
 """Scene representation with acoustic sources and microphones."""
 
 import numpy as np
-from acoular import Environment
 from scipy.interpolate import CubicSpline
 from traits.api import CList, HasStrictTraits, Instance
 
+from scene_synthesis.environments import Environment
 from scene_synthesis.microphones import Microphone
 from scene_synthesis.sources import Source
 
@@ -37,6 +37,28 @@ class Scene(HasStrictTraits):
             return np.where(np.isnan(interp_signal), 0.0, interp_signal)
 
         return np.interp(interpolation_space, receiving_times, squished_signal, left=0.0, right=0.0)
+
+    def _source_state(self, source, sending_time):
+        """Return source position and velocity at one sending time."""
+        if source.trajectory is not None:
+            source_loc = np.array(source.trajectory.location(sending_time)).T
+            source_vel = np.array(source.trajectory.location(sending_time, der=1)).T
+        else:
+            source_loc = np.array(source.location)
+            source_vel = np.array([0, 0, 0])
+
+        return source_loc, source_vel
+
+    def _propagation_sample(self, source, source_loc, source_vel, mic):
+        """Return propagation quantities for one source-microphone sample."""
+        c = self.environment.c
+        mic_loc = np.array(mic.location)
+        relative_loc = source_loc - mic_loc
+        source_pos = np.asarray(source_loc, dtype=float).reshape(3, -1)
+        distance = float(np.asarray(self.environment.apparent_r(source_pos, mic_loc)).reshape(-1)[0])
+        spread = float(np.asarray(self.environment.spread(source_pos, mic_loc)).reshape(-1)[0])
+        radial_mach = float(np.dot(source_vel, relative_loc / distance) / c) if source.conv_amp else 0.0
+        return distance, spread, radial_mach
 
     def result(self, num=128):
         """
@@ -110,7 +132,7 @@ class Scene(HasStrictTraits):
                     # pair. Use Python lists here to avoid repeated array
                     # reallocations from ``np.append`` in the inner loop.
                     new_receiving_times_list: list[float] = []
-                    new_distances_list: list[float] = []
+                    new_spreads_list: list[float] = []
                     new_radial_machs_list: list[float] = []
                     last_size = sent_signal_size_matrix[source_id, mic_id]
 
@@ -120,27 +142,19 @@ class Scene(HasStrictTraits):
                             break
 
                         sending_time = (last_sending_step_matrix[source_id, mic_id] + step) / sample_freq
-                        if source.trajectory is not None:
-                            source_loc = np.array(source.trajectory.location(sending_time)).T
-                            source_vel = np.array(source.trajectory.location(sending_time, der=1)).T
-                        else:
-                            source_loc = np.array(source.location)
-                            source_vel = np.array([0, 0, 0])
-                        relative_loc = source_loc - np.array(mic.location)
-                        distance = np.linalg.norm(relative_loc)
+                        source_loc, source_vel = self._source_state(source, sending_time)
+                        distance, spread, radial_mach = self._propagation_sample(source, source_loc, source_vel, mic)
                         time_delays = distance / c
                         receiving_time = sending_time + time_delays
 
                         new_receiving_times_list.append(float(receiving_time))
-                        new_distances_list.append(float(distance))
-
-                        radial_mach = float(np.dot(source_vel, relative_loc / distance) / c) if source.conv_amp else 0.0
+                        new_spreads_list.append(spread)
                         new_radial_machs_list.append(radial_mach)
 
                         step += 1
 
                     new_receiving_times = np.array(new_receiving_times_list, dtype=float)
-                    new_distances = np.array(new_distances_list, dtype=float)
+                    new_spreads = np.array(new_spreads_list, dtype=float)
                     new_radial_machs = np.array(new_radial_machs_list, dtype=float)
 
                     last_sending_step_matrix[source_id, mic_id] += step
@@ -149,10 +163,11 @@ class Scene(HasStrictTraits):
                     signal = source.signal.signal()[last_size : last_size + new_receiving_times.size]
                     sent_signal_size_matrix[source_id, mic_id] += new_receiving_times.size
 
-                    # Apply spherical spreading loss and Doppler effect correction
+                    # Apply geometric spreading from the environment and
+                    # Doppler effect correction.
                     # Something about the normalization factor of 4 pi is wrong.
                     # Probably has something to do with the radial Mach number.
-                    new_squished_signal = signal / new_distances / np.square(1 - new_radial_machs)  # / 4 / np.pi
+                    new_squished_signal = signal * new_spreads / np.square(1 - new_radial_machs)  # / 4 / np.pi
 
                     # Combine carry-over tail from previous block with newly generated samples.
                     prev_times = carry_receiving_times[source_id][mic_id]
