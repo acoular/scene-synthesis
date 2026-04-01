@@ -1,4 +1,10 @@
-"""Trajectory definition with a fixed frame of reference."""
+"""Trajectory definitions for scene synthesis.
+
+This module separates the abstract trajectory interface from the current
+fixed-frame implementation. That keeps the existing point-trajectory use case
+available while leaving room for future motion models with moving local
+reference frames.
+"""
 
 import numpy as np
 from scipy.interpolate import splev, splprep
@@ -6,12 +12,30 @@ from traits.api import Dict, Float, HasStrictTraits, Property, Tuple, cached_pro
 
 
 class Trajectory(HasStrictTraits):
-    """Represent a source trajectory in a fixed frame of reference.
+    """Abstract trajectory interface.
+
+    A trajectory maps time to a 3D position and optionally provides time
+    derivatives such as velocity. Concrete implementations may represent only a
+    point moving in the global frame or, in the future, trajectories derived
+    from richer motion/reference-frame descriptions.
+    """
+
+    def location(self, t, der=0):
+        """Evaluate the trajectory or one of its derivatives at time ``t``."""
+        raise NotImplementedError
+
+    def shift_by_offset(self, x_off):
+        """Return a shifted copy of the trajectory."""
+        raise NotImplementedError
+
+
+class FixedTrajectory(Trajectory):
+    """Represent a point trajectory in a fixed frame of reference.
 
     The trajectory is specified by a mapping from time instants to sampled
-    ``(x, y, z)`` positions. A spline is fit through those samples and can
-    then be evaluated at arbitrary times to obtain positions or time
-    derivatives such as velocity.
+    ``(x, y, z)`` positions in the global frame. A spline is fit through those
+    samples and can then be evaluated at arbitrary times to obtain positions or
+    time derivatives such as velocity.
 
     Notes
     -----
@@ -23,7 +47,7 @@ class Trajectory(HasStrictTraits):
     Examples
     --------
     >>> import scene_synthesis as ss
-    >>> trajectory = ss.Trajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
+    >>> trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
     >>> trajectory.location(0.5)
     [array(0.5), array(0.), array(0.)]
     """
@@ -79,11 +103,28 @@ class Trajectory(HasStrictTraits):
         Examples
         --------
         >>> import scene_synthesis as ss
-        >>> trajectory = ss.Trajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
+        >>> trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
         >>> trajectory.location(0.5)
         [array(0.5), array(0.), array(0.)]
         """
         return splev(t, self.tck, der)
+
+    def shift_by_offset(self, x_off):
+        """Return a copy of the trajectory shifted by a constant 3D offset.
+
+        Parameters
+        ----------
+        x_off : array-like of float
+            Offset added to every sampled point.
+
+        Returns
+        -------
+        FixedTrajectory
+            Shifted trajectory with the same time samples.
+        """
+        offset = np.asarray(x_off, dtype=float)
+        shifted_points = {time: tuple(np.asarray(point, dtype=float) + offset) for time, point in self.points.items()}
+        return FixedTrajectory(points=shifted_points)
 
     def traj(self, t_start, t_end=None, delta_t=None, der=0):
         """Iterate through trajectory samples over a time range.
@@ -111,7 +152,7 @@ class Trajectory(HasStrictTraits):
         Examples
         --------
         >>> import scene_synthesis as ss
-        >>> trajectory = ss.Trajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
+        >>> trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
         >>> samples = list(trajectory.traj(0.5))
         >>> samples[0]
         (np.float64(0.0), np.float64(0.0), np.float64(0.0))
@@ -124,7 +165,6 @@ class Trajectory(HasStrictTraits):
         (np.float64(0.5), np.float64(0.0), np.float64(0.0))
         """
         if delta_t is None:
-            # Interpret t_start as the step size and use the full trajectory interval.
             delta_t = t_start
             t_start, t_end = self.interval
         if delta_t <= 0:

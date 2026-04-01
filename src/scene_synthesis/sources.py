@@ -16,9 +16,9 @@ class Source(HasStrictTraits):
     Instantiate a simple source with a sine signal and a default trajectory:
 
     >>> from acoular import SineGenerator
-    >>> from scene_synthesis import Source, Trajectory
+    >>> from scene_synthesis import FixedTrajectory, Source
     >>> signal = SineGenerator(freq=1000, sample_freq=44100, num_samples=44100)
-    >>> trajectory = Trajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
+    >>> trajectory = FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
     >>> source = Source(signal=signal, trajectory=trajectory)
     """
 

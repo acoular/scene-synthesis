@@ -6,4 +6,5 @@ from .environments import Environment as Environment
 from .microphones import Microphone as Microphone
 from .scene import Scene as Scene
 from .sources import Source as Source
+from .trajectory import FixedTrajectory as FixedTrajectory
 from .trajectory import Trajectory as Trajectory

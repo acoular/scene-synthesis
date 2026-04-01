@@ -6,15 +6,15 @@ import scene_synthesis as ss
 
 
 def test_trajectory_interval_uses_point_bounds():
-    """``Trajectory.interval`` should expose the first and last point times."""
-    trajectory = ss.Trajectory(points={0.5: (0.0, 0.0, 0.0), 2.0: (1.0, 0.0, 0.0), 1.0: (0.5, 0.0, 0.0)})
+    """``FixedTrajectory.interval`` should expose the first and last point times."""
+    trajectory = ss.FixedTrajectory(points={0.5: (0.0, 0.0, 0.0), 2.0: (1.0, 0.0, 0.0), 1.0: (0.5, 0.0, 0.0)})
 
     np.testing.assert_allclose(trajectory.interval, np.array([0.5, 2.0]))
 
 
 def test_trajectory_location_matches_sampled_points():
-    """``Trajectory.location`` should pass through the sampled points."""
-    trajectory = ss.Trajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 2.0, 0.0), 2.0: (2.0, 4.0, 0.0)})
+    """``FixedTrajectory.location`` should pass through the sampled points."""
+    trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 2.0, 0.0), 2.0: (2.0, 4.0, 0.0)})
 
     location = np.array(trajectory.location(1.0))
 
@@ -22,8 +22,8 @@ def test_trajectory_location_matches_sampled_points():
 
 
 def test_trajectory_traj_iterates_over_requested_range():
-    """``Trajectory.traj`` should iterate over positions with the requested step size."""
-    trajectory = ss.Trajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
+    """``FixedTrajectory.traj`` should iterate over positions with the requested step size."""
+    trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
 
     samples = list(trajectory.traj(0.0, 1.0, 0.25))
 
@@ -33,8 +33,18 @@ def test_trajectory_traj_iterates_over_requested_range():
 
 
 def test_trajectory_location_requires_at_least_two_points():
-    """``Trajectory.location`` should raise a clear error for underspecified splines."""
-    trajectory = ss.Trajectory(points={0.0: (0.0, 0.0, 0.0)})
+    """``FixedTrajectory.location`` should raise a clear error for underspecified splines."""
+    trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0)})
 
     with pytest.raises(ValueError, match='at least two sampled positions'):
         trajectory.location(0.0)
+
+
+def test_trajectory_shift_by_offset_moves_all_sampled_points():
+    """``FixedTrajectory.shift_by_offset`` should shift all sampled points."""
+    trajectory = ss.FixedTrajectory(points={0.0: (0.0, 1.0, 2.0), 1.0: (1.0, 2.0, 3.0)})
+
+    shifted = trajectory.shift_by_offset((1.0, -1.0, 0.5))
+
+    np.testing.assert_allclose(np.array(shifted.location(0.0)), np.array([1.0, 0.0, 2.5]))
+    np.testing.assert_allclose(np.array(shifted.location(1.0)), np.array([2.0, 1.0, 3.5]))
