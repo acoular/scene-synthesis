@@ -37,5 +37,6 @@ class Trajectories:
 
     def case_static_array(self):
         """Static array trajectory test case."""
-        points_array = [{0.0: (x, y, 1.0), 1.0: (x, y, 1.0)} for x, y in [(1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]]
-        return [ss.FixedTrajectory(points=points) for points in points_array]
+        base_trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 1.0), 1.0: (0.0, 0.0, 1.0)})
+        offsets = [(1.0, 1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 0.0)]
+        return [base_trajectory.shift_by_offset(offset) for offset in offsets]
