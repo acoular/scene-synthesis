@@ -48,3 +48,11 @@ def test_trajectory_shift_by_offset_moves_all_sampled_points():
 
     np.testing.assert_allclose(np.array(shifted.location(0.0)), np.array([1.0, 0.0, 2.5]))
     np.testing.assert_allclose(np.array(shifted.location(1.0)), np.array([2.0, 1.0, 3.5]))
+
+
+def test_trajectory_shift_by_offset_requires_three_coordinates():
+    """``FixedTrajectory.shift_by_offset`` should reject offsets with invalid shapes."""
+    trajectory = ss.FixedTrajectory(points={0.0: (0.0, 1.0, 2.0), 1.0: (1.0, 2.0, 3.0)})
+
+    with pytest.raises(ValueError, match=r'shape \(3,\)'):
+        trajectory.shift_by_offset(1.0)

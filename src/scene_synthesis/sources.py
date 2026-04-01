@@ -13,7 +13,7 @@ class Source(HasStrictTraits):
 
     Examples
     --------
-    Instantiate a simple source with a sine signal and a default trajectory:
+    Instantiate a simple source with a sine signal and a fixed trajectory:
 
     >>> from acoular import SineGenerator
     >>> from scene_synthesis import FixedTrajectory, Source
