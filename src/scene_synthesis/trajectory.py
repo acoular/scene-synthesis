@@ -152,7 +152,7 @@ class SplineTrajectory(Trajectory):
             raise ValueError(msg)
 
     def _prepare_samples(self):
-        """Sort sample times and merge duplicate times with identical locations."""
+        """Sort sample times and merge exact duplicate times with identical locations."""
         order = np.argsort(self.times)
         sorted_times = self.times[order]
         sorted_locations = self.locations[order]
@@ -160,7 +160,7 @@ class SplineTrajectory(Trajectory):
         unique_times = [sorted_times[0]]
         unique_locations = [sorted_locations[0]]
         for time, location in zip(sorted_times[1:], sorted_locations[1:], strict=True):
-            if np.isclose(time, unique_times[-1]):
+            if time == unique_times[-1]:
                 if not np.allclose(location, unique_locations[-1]):
                     msg = 'duplicate times must map to identical locations.'
                     raise ValueError(msg)

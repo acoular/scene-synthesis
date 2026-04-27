@@ -5,8 +5,9 @@ import scene_synthesis as ss
 
 
 class Trajectories:
-    """Test cases for :class:`scene_synthesis.trajectory.SplineTrajectory` objects
-    and ``None`` (no trajectory).
+    """Test cases for :class:`scene_synthesis.trajectory.SplineTrajectory` objects.
+
+    Also goes over ``None`` (no trajectory).
 
     New trajectories should be added here.
     """
