@@ -1,58 +1,112 @@
-"""Unit tests for the scene-synthesis trajectory class."""
+"""Unit tests for the scene-synthesis trajectory classes."""
 
 import numpy as np
 import pytest
 import scene_synthesis as ss
 
 
-def test_trajectory_interval_uses_point_bounds():
-    """``FixedTrajectory.interval`` should expose the first and last point times."""
-    trajectory = ss.FixedTrajectory(points={0.5: (0.0, 0.0, 0.0), 2.0: (1.0, 0.0, 0.0), 1.0: (0.5, 0.0, 0.0)})
+def test_trajectory_accepts_independent_location_and_velocity_functions():
+    """``Trajectory`` should allow independently defined position and velocity."""
+    trajectory = ss.Trajectory(
+        location=lambda t: np.stack([np.asarray(t), np.zeros_like(t), np.ones_like(t)], axis=-1),
+        velocity=lambda t: np.stack([2 * np.ones_like(t), np.zeros_like(t), -np.ones_like(t)], axis=-1),
+    )
 
-    np.testing.assert_allclose(trajectory.interval, np.array([0.5, 2.0]))
+    np.testing.assert_allclose(np.array(trajectory.location(0.5)), np.array([0.5, 0.0, 1.0]))
+    np.testing.assert_allclose(np.array(trajectory.velocity(0.5)), np.array([2.0, 0.0, -1.0]))
 
 
-def test_trajectory_location_matches_sampled_points():
-    """``FixedTrajectory.location`` should pass through the sampled points."""
-    trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 2.0, 0.0), 2.0: (2.0, 4.0, 0.0)})
+def test_trajectory_normalizes_vectorized_outputs():
+    """``Trajectory`` should normalize vectorized 3D outputs."""
+    trajectory = ss.Trajectory(
+        location=lambda t: np.stack([np.asarray(t), np.asarray(t) ** 2, np.ones_like(t)], axis=-1),
+        velocity=lambda t: np.stack([np.ones_like(t), 2 * np.asarray(t), np.zeros_like(t)], axis=-1),
+    )
+
+    times = np.array([0.0, 1.0, 2.0])
+    location = trajectory.location(times)
+    velocity = trajectory.velocity(times)
+
+    np.testing.assert_allclose(np.array(location), np.array([[0.0, 1.0, 2.0], [0.0, 1.0, 4.0], [1.0, 1.0, 1.0]]))
+    np.testing.assert_allclose(np.array(velocity), np.array([[1.0, 1.0, 1.0], [0.0, 2.0, 4.0], [0.0, 0.0, 0.0]]))
+
+
+def test_trajectory_accepts_integer_time_inputs():
+    """``Trajectory`` should accept integer time inputs."""
+    trajectory = ss.Trajectory(
+        location=lambda t: np.stack([np.asarray(t), np.zeros_like(t), np.ones_like(t)], axis=-1),
+        velocity=lambda t: np.stack([np.ones_like(t), np.zeros_like(t), np.zeros_like(t)], axis=-1),
+    )
+
+    np.testing.assert_allclose(np.array(trajectory.location(1)), np.array([1.0, 0.0, 1.0]))
+    np.testing.assert_allclose(np.array(trajectory.velocity(1)), np.array([1.0, 0.0, 0.0]))
+
+
+def test_spline_trajectory_location_matches_sampled_points():
+    """``SplineTrajectory.location`` should pass through the sampled points."""
+    trajectory = ss.SplineTrajectory(
+        times=[0.0, 1.0, 2.0],
+        locations=[[0.0, 0.0, 0.0], [1.0, 2.0, 0.0], [2.0, 4.0, 0.0]],
+    )
 
     location = np.array(trajectory.location(1.0))
 
     np.testing.assert_allclose(location, np.array([1.0, 2.0, 0.0]))
 
 
-def test_trajectory_traj_iterates_over_requested_range():
-    """``FixedTrajectory.traj`` should iterate over positions with the requested step size."""
-    trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
+def test_spline_trajectory_velocity_matches_linear_slope():
+    """``SplineTrajectory.velocity`` should return the spline derivative."""
+    trajectory = ss.SplineTrajectory(times=[0.0, 1.0], locations=[[0.0, 0.0, 0.0], [2.0, 1.0, -1.0]])
 
-    samples = list(trajectory.traj(0.0, 1.0, 0.25))
+    velocity = np.array(trajectory.velocity(0.5))
 
-    assert len(samples) == 4
-    np.testing.assert_allclose(samples[0], (0.0, 0.0, 0.0))
-    np.testing.assert_allclose(samples[-1], (0.75, 0.0, 0.0))
+    np.testing.assert_allclose(velocity, np.array([2.0, 1.0, -1.0]))
 
 
-def test_trajectory_location_requires_at_least_two_points():
-    """``FixedTrajectory.location`` should raise a clear error for underspecified splines."""
-    trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0)})
+def test_spline_trajectory_accepts_integer_inputs():
+    """``SplineTrajectory`` should accept integer sample data and query times."""
+    trajectory = ss.SplineTrajectory(times=[0, 1], locations=[[0, 0, 0], [2, 0, 0]])
 
-    with pytest.raises(ValueError, match='at least two sampled positions'):
-        trajectory.location(0.0)
-
-
-def test_trajectory_shift_by_offset_moves_all_sampled_points():
-    """``FixedTrajectory.shift_by_offset`` should shift all sampled points."""
-    trajectory = ss.FixedTrajectory(points={0.0: (0.0, 1.0, 2.0), 1.0: (1.0, 2.0, 3.0)})
-
-    shifted = trajectory.shift_by_offset((1.0, -1.0, 0.5))
-
-    np.testing.assert_allclose(np.array(shifted.location(0.0)), np.array([1.0, 0.0, 2.5]))
-    np.testing.assert_allclose(np.array(shifted.location(1.0)), np.array([2.0, 1.0, 3.5]))
+    np.testing.assert_allclose(np.array(trajectory.location(1)), np.array([2.0, 0.0, 0.0]))
+    np.testing.assert_allclose(np.array(trajectory.velocity(1)), np.array([2.0, 0.0, 0.0]))
 
 
-def test_trajectory_shift_by_offset_requires_three_coordinates():
-    """``FixedTrajectory.shift_by_offset`` should reject offsets with invalid shapes."""
-    trajectory = ss.FixedTrajectory(points={0.0: (0.0, 1.0, 2.0), 1.0: (1.0, 2.0, 3.0)})
+def test_spline_trajectory_supports_vectorized_queries():
+    """``SplineTrajectory`` should support array-valued query times."""
+    trajectory = ss.SplineTrajectory(times=[0.0, 1.0], locations=[[0.0, 0.0, 0.0], [2.0, 1.0, -1.0]])
 
-    with pytest.raises(ValueError, match=r'shape \(3,\)'):
-        trajectory.shift_by_offset(1.0)
+    times = np.array([0.0, 0.5, 1.0])
+    location = np.array(trajectory.location(times))
+    velocity = np.array(trajectory.velocity(times))
+
+    np.testing.assert_allclose(location, np.array([[0.0, 1.0, 2.0], [0.0, 0.5, 1.0], [0.0, -0.5, -1.0]]))
+    np.testing.assert_allclose(velocity, np.array([[2.0, 2.0, 2.0], [1.0, 1.0, 1.0], [-1.0, -1.0, -1.0]]))
+
+
+def test_spline_trajectory_requires_at_least_two_times():
+    """``SplineTrajectory`` should reject underspecified splines."""
+    with pytest.raises(ValueError, match='at least two samples'):
+        ss.SplineTrajectory(times=[0.0], locations=[[0.0, 0.0, 0.0]])
+
+
+def test_spline_trajectory_requires_matching_location_shape():
+    """``SplineTrajectory`` should validate the shape of the sampled locations."""
+    with pytest.raises(ValueError, match='locations must have shape'):
+        ss.SplineTrajectory(times=[0.0, 1.0], locations=[[0.0, 0.0], [1.0, 0.0]])
+
+
+def test_spline_trajectory_sorts_and_deduplicates_times():
+    """``SplineTrajectory`` should accept unsorted or repeated times when consistent."""
+    trajectory = ss.SplineTrajectory(
+        times=[1.0, 0.0, 0.0, 2.0],
+        locations=[[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [2.0, 0.0, 0.0]],
+    )
+
+    np.testing.assert_allclose(trajectory.times, np.array([0.0, 1.0, 2.0]))
+    np.testing.assert_allclose(np.array(trajectory.location(1.0)), np.array([1.0, 0.0, 0.0]))
+
+
+def test_spline_trajectory_rejects_conflicting_duplicate_times():
+    """``SplineTrajectory`` should reject duplicate times with conflicting locations."""
+    with pytest.raises(ValueError, match='duplicate times must map to identical locations'):
+        ss.SplineTrajectory(times=[0.0, 0.0], locations=[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])

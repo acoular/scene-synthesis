@@ -5,7 +5,7 @@ import scene_synthesis as ss
 
 
 class Trajectories:
-    """Test cases for all :class:`scene_synthesis.trajectory.FixedTrajectory` objects.
+    """Test cases for all :class:`scene_synthesis.trajectory.SplineTrajectory` objects.
 
     New trajectories should be added here.
     """
@@ -16,27 +16,37 @@ class Trajectories:
 
     def case_static(self):
         """Static trajectory test case."""
-        points = {0.0: (1.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)}
-        return [ss.FixedTrajectory(points=points)]
+        times = [0.0, 1.0]
+        locations = [[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]]
+        return [ss.SplineTrajectory(times=times, locations=locations)]
 
     def case_linear_pass(self):
         """Linear pass trajectory (fly by) test case."""
-        points = {0.0: (-1.0, -1.0, 1.0), 1.0: (1.0, 1.0, 1.0)}
-        return [ss.FixedTrajectory(points=points)]
+        times = [0.0, 1.0]
+        locations = [[-1.0, -1.0, 1.0], [1.0, 1.0, 1.0]]
+        return [ss.SplineTrajectory(times=times, locations=locations)]
 
     def case_linear_approach(self):
         """Linear approach trajectory (fly at) test case."""
-        points = {0.0: (5.0, 0.0, 0.0), 1.0: (0.5, 0.0, 0.0)}
-        return [ss.FixedTrajectory(points=points)]
+        times = [0.0, 1.0]
+        locations = [[5.0, 0.0, 0.0], [0.5, 0.0, 0.0]]
+        return [ss.SplineTrajectory(times=times, locations=locations)]
 
     def case_circular(self):
         """Circular trajectory (fly around) test case."""
         n = 3600
-        points = {i / n: (1.0 * np.cos(2 * np.pi * i / n), 1.0 * np.sin(2 * np.pi * i / n), 0.0) for i in range(n + 1)}
-        return [ss.FixedTrajectory(points=points)]
+        times = np.linspace(0.0, 1.0, n + 1)
+        locations = np.column_stack(
+            [
+                np.cos(2 * np.pi * times),
+                np.sin(2 * np.pi * times),
+                np.zeros_like(times),
+            ]
+        )
+        return [ss.SplineTrajectory(times=times, locations=locations)]
 
     def case_static_array(self):
         """Static array trajectory test case."""
-        base_trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 1.0), 1.0: (0.0, 0.0, 1.0)})
-        offsets = [(1.0, 1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 0.0)]
-        return [base_trajectory.shift_by_offset(offset) for offset in offsets]
+        times = [0.0, 1.0]
+        static_points = [(1.0, 1.0, 1.0), (1.0, 0.0, 1.0), (0.0, 0.0, 1.0)]
+        return [ss.SplineTrajectory(times=times, locations=[point, point]) for point in static_points]

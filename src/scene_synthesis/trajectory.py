@@ -1,173 +1,176 @@
 """Trajectory definitions for scene synthesis."""
 
 import numpy as np
-from scipy.interpolate import splev, splprep
-from traits.api import Dict, Float, HasStrictTraits, Property, Tuple, cached_property, property_depends_on
+from scipy.interpolate import make_interp_spline
+from traits.api import Any, Array, Callable, HasStrictTraits, Property
 
 
 class Trajectory(HasStrictTraits):
-    """Abstract trajectory interface.
+    """Trajectory with independently supplied location and velocity functions.
 
-    A trajectory maps time to a 3D position and optionally provides time
-    derivatives such as velocity. Concrete implementations may represent only a
-    point moving in the global frame or, in the future, trajectories derived
-    from richer motion/reference-frame descriptions.
-    """
-
-    def location(self, t, der=0):
-        """Evaluate the trajectory or one of its derivatives at time ``t``."""
-        raise NotImplementedError
-
-    def shift_by_offset(self, x_off):
-        """Return a shifted copy of the trajectory."""
-        raise NotImplementedError
-
-
-class FixedTrajectory(Trajectory):
-    """Represent a point trajectory in a fixed frame of reference.
-
-    The trajectory is specified by a mapping from time instants to sampled
-    ``(x, y, z)`` positions in the global frame. A spline is fit through those
-    samples and can then be evaluated at arbitrary times to obtain positions or
-    time derivatives such as velocity.
+    Parameters
+    ----------
+    location : callable
+        Function mapping time ``t`` to a 3D position.
+    velocity : callable
+        Function mapping time ``t`` to a 3D velocity. This does not need to be
+        the time derivative of ``location``.
 
     Notes
     -----
-    - The spline order is chosen automatically based on the number of
-      available points, up to cubic interpolation.
-    - The frame of reference is fixed, i.e. the sampled positions are
-      interpreted directly as global coordinates.
+    The return values are normalized to the component-wise convention used by
+    the rest of scene-synthesis: ``[x, y, z]`` for scalar times and three
+    arrays ``[x(t), y(t), z(t)]`` for array-valued times.
 
     Examples
     --------
     >>> import scene_synthesis as ss
-    >>> trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
-    >>> trajectory.location(0.5)
-    [array(0.5), array(0.), array(0.)]
+    >>> location = lambda t: np.stack(
+    ...     [np.asarray(t), np.zeros_like(t), np.ones_like(t)],
+    ...     axis=-1,
+    ... )
+    >>> velocity = lambda t: np.stack(
+    ...     [np.ones_like(t), np.zeros_like(t), np.zeros_like(t)],
+    ...     axis=-1,
+    ... )
+    >>> traj = ss.Trajectory(location=location, velocity=velocity)
+    >>> traj.location(0.5)
+    [array(0.5), array(0.), array(1.)]
+    >>> traj.velocity(0.5)
+    [array(1.), array(0.), array(0.)]
     """
 
-    #: Dictionary mapping time instants to sampled ``(x, y, z)`` positions.
-    points = Dict(
-        key_trait=Float,
-        value_trait=Tuple(Float, Float, Float),
-    )
+    #: Time-dependent position function.
+    location = Property(desc='time-dependent position function')
 
-    #: Start and end time of the trajectory as ``(t_min, t_max)``.
-    interval = Property()
+    #: Backing trait for :attr:`location`.
+    _location = Callable
 
-    #: Internal spline representation returned by :func:`scipy.interpolate.splprep`.
-    tck = Property()
+    #: Time-dependent velocity function.
+    velocity = Property(desc='time-dependent velocity function')
 
-    @property_depends_on(['points[]'])
-    def _get_interval(self):
-        if not self.points:
-            msg = 'Trajectory.points must contain at least one sampled position to compute an interval.'
+    #: Backing trait for :attr:`velocity`.
+    _velocity = Callable
+
+    @staticmethod
+    def _normalize_output(value):
+        """Normalize trajectory outputs to three component arrays."""
+        if isinstance(value, (list, tuple)) and len(value) == 3:
+            return [np.asarray(component, dtype=float) for component in value]
+
+        array = np.asarray(value, dtype=float)
+        if array.shape == (3,):
+            return [np.asarray(array[0]), np.asarray(array[1]), np.asarray(array[2])]
+        if array.ndim >= 2 and array.shape[-1] == 3:
+            return [np.asarray(array[..., 0]), np.asarray(array[..., 1]), np.asarray(array[..., 2])]
+        if array.ndim >= 1 and array.shape[0] == 3:
+            return [np.asarray(array[0, ...]), np.asarray(array[1, ...]), np.asarray(array[2, ...])]
+
+        msg = f'Trajectory output must describe 3D coordinates, got shape {array.shape}.'
+        raise ValueError(msg)
+
+    def _get_location(self):
+        return lambda t: self._normalize_output(self._location(t))
+
+    def _set_location(self, value):
+        if not callable(value):
+            msg = 'location must be callable.'
             raise ValueError(msg)
-        return np.sort(list(self.points.keys()))[np.r_[0, -1]]
+        self._location = value
 
-    @cached_property
-    @property_depends_on(['points[]'])
-    def _get_tck(self):
-        if len(self.points) < 2:
-            msg = 'Trajectory.points must contain at least two sampled positions to build a spline.'
+    def _get_velocity(self):
+        return lambda t: self._normalize_output(self._velocity(t))
+
+    def _set_velocity(self, value):
+        if not callable(value):
+            msg = 'velocity must be callable.'
             raise ValueError(msg)
-        t = np.sort(list(self.points.keys()))
-        xp = np.array([self.points[i] for i in t]).T
-        k = min(3, len(self.points) - 1)
-        tcku = splprep(xp, u=t, s=0, k=k)
-        return tcku[0]
+        self._velocity = value
 
-    def location(self, t, der=0):
-        """Evaluate the trajectory or one of its derivatives.
 
-        Parameters
-        ----------
-        t : float or array-like of float
-            Time instant or time instants at which to evaluate the trajectory.
-        der : int, optional
-            Derivative order. Use ``0`` for position, ``1`` for velocity,
-            ``2`` for acceleration, and so on. Defaults to ``0``.
+class SplineTrajectory(Trajectory):
+    """Spline-based trajectory built from sampled times and locations.
 
-        Returns
-        -------
-        list[numpy.ndarray]
-            Three arrays representing the ``x``, ``y``, and ``z`` components
-            at the requested times.
+    Parameters
+    ----------
+    times : array-like of float
+        Sample times.
+    locations : array-like of float
+        Sample positions with shape ``(N, 3)`` matching ``times``.
 
-        Examples
-        --------
-        >>> import scene_synthesis as ss
-        >>> trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
-        >>> trajectory.location(0.5)
-        [array(0.5), array(0.), array(0.)]
-        """
-        return splev(t, self.tck, der)
+    Notes
+    -----
+    The location spline order is chosen automatically up to cubic, which keeps
+    the interpolated trajectory at least :math:`C^1` whenever the available
+    number of samples permits it.
 
-    def shift_by_offset(self, x_off):
-        """Return a copy of the trajectory shifted by a constant 3D offset.
+    Examples
+    --------
+    >>> import scene_synthesis as ss
+    >>> trajectory = ss.SplineTrajectory(
+    ...     times=[0.0, 1.0],
+    ...     locations=[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+    ... )
+    >>> trajectory.location(0.5)
+    [array(0.5), array(0.), array(0.)]
+    >>> trajectory.velocity(0.5)
+    [array(1.), array(0.), array(0.)]
+    """
 
-        Parameters
-        ----------
-        x_off : array-like of float
-            Offset added to every sampled point.
+    #: Sample times.
+    times = Array(dtype=float)
 
-        Returns
-        -------
-        FixedTrajectory
-            Shifted trajectory with the same time samples.
-        """
-        offset = np.asarray(x_off, dtype=float)
-        # Validate that the offset is a 3D vector to avoid ambiguous NumPy broadcasting.
-        if offset.shape != (3,):
-            msg = f'x_off must be an array-like of shape (3,), got {offset.shape} instead.'
+    #: Sample locations with shape ``(N, 3)``.
+    locations = Array(dtype=float)
+
+    #: Internal spline objects.
+    _location_spline = Any
+    _velocity_spline = Any
+
+    def __init__(self, times, locations):
+        self.times = np.asarray(times, dtype=float)
+        self.locations = np.asarray(locations, dtype=float)
+        self._validate_inputs()
+        self._prepare_samples()
+
+        order = min(3, self.times.size - 1)
+        self._location_spline = make_interp_spline(self.times, self.locations, k=order, axis=0)
+        self._velocity_spline = self._location_spline.derivative()
+
+        super().__init__(location=self._location_spline.__call__, velocity=self._velocity_spline.__call__)
+
+    def _validate_inputs(self):
+        """Validate spline trajectory inputs."""
+        if self.times.ndim != 1:
+            msg = f'times must be a one-dimensional array, got shape {self.times.shape}.'
             raise ValueError(msg)
-        shifted_points = {time: tuple(np.asarray(point, dtype=float) + offset) for time, point in self.points.items()}
-        return FixedTrajectory(points=shifted_points)
-
-    def traj(self, t_start, t_end=None, delta_t=None, der=0):
-        """Iterate through trajectory samples over a time range.
-
-        Parameters
-        ----------
-        t_start : float
-            Start time of the iteration. If ``delta_t`` is omitted, this value
-            is interpreted as the step size and the full trajectory interval is
-            used.
-        t_end : float, optional
-            End time of the iteration. Defaults to the end of
-            :attr:`interval`.
-        delta_t : float, optional
-            Time step between yielded samples. If omitted, ``t_start`` is used
-            as the step size for traversing the full trajectory interval.
-        der : int, optional
-            Derivative order to evaluate. Defaults to ``0``.
-
-        Yields
-        ------
-        tuple[numpy.float64, numpy.float64, numpy.float64]
-            The interpolated ``(x, y, z)`` values at each sampled time.
-
-        Examples
-        --------
-        >>> import scene_synthesis as ss
-        >>> trajectory = ss.FixedTrajectory(points={0.0: (0.0, 0.0, 0.0), 1.0: (1.0, 0.0, 0.0)})
-        >>> samples = list(trajectory.traj(0.5))
-        >>> samples[0]
-        (np.float64(0.0), np.float64(0.0), np.float64(0.0))
-        >>> samples[1]
-        (np.float64(0.5), np.float64(0.0), np.float64(0.0))
-        >>> samples = list(trajectory.traj(0.0, 1.0, 0.5))
-        >>> samples[0]
-        (np.float64(0.0), np.float64(0.0), np.float64(0.0))
-        >>> samples[1]
-        (np.float64(0.5), np.float64(0.0), np.float64(0.0))
-        """
-        if delta_t is None:
-            delta_t = t_start
-            t_start, t_end = self.interval
-        if delta_t <= 0:
-            msg = 'delta_t must be a positive time step.'
+        if self.times.size < 2:
+            msg = 'times must contain at least two samples.'
             raise ValueError(msg)
-        if t_end is None:
-            t_end = self.interval[1]
-        yield from zip(*self.location(np.arange(t_start, t_end, delta_t), der), strict=True)
+        if self.locations.shape != (self.times.size, 3):
+            msg = f'locations must have shape ({self.times.size}, 3), got {self.locations.shape}.'
+            raise ValueError(msg)
+
+    def _prepare_samples(self):
+        """Sort sample times and merge duplicate times with identical locations."""
+        order = np.argsort(self.times)
+        sorted_times = self.times[order]
+        sorted_locations = self.locations[order]
+
+        unique_times = [sorted_times[0]]
+        unique_locations = [sorted_locations[0]]
+        for time, location in zip(sorted_times[1:], sorted_locations[1:], strict=True):
+            if np.isclose(time, unique_times[-1]):
+                if not np.allclose(location, unique_locations[-1]):
+                    msg = 'duplicate times must map to identical locations.'
+                    raise ValueError(msg)
+                continue
+            unique_times.append(time)
+            unique_locations.append(location)
+
+        self.times = np.asarray(unique_times, dtype=float)
+        self.locations = np.asarray(unique_locations, dtype=float)
+
+        if self.times.size < 2:
+            msg = 'times must contain at least two distinct samples.'
+            raise ValueError(msg)

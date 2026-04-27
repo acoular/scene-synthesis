@@ -42,7 +42,7 @@ class Scene(HasStrictTraits):
         """Return source position and velocity at one sending time."""
         if source.trajectory is not None:
             source_loc = np.array(source.trajectory.location(sending_time)).T
-            source_vel = np.array(source.trajectory.location(sending_time, der=1)).T
+            source_vel = np.array(source.trajectory.velocity(sending_time)).T
         else:
             source_loc = np.array(source.location)
             source_vel = np.array([0, 0, 0])
