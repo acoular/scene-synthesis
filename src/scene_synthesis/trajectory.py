@@ -41,13 +41,13 @@ class Trajectory(HasStrictTraits):
     """
 
     #: Time-dependent position function.
-    location = Property(desc='time-dependent position function')
+    location = Property()
 
     #: Backing trait for :attr:`location`.
     _location = Callable
 
     #: Time-dependent velocity function.
-    velocity = Property(desc='time-dependent velocity function')
+    velocity = Property()
 
     #: Backing trait for :attr:`velocity`.
     _velocity = Callable

@@ -42,7 +42,7 @@ class Source(HasStrictTraits):
     #: self.orientation[0] = right_vec
     #: self.orientation[1] = up_vec
     #: self.orientation[2] = forward_vec
-    orientation = CArray(shape=(3, 3), desc='source orientation matrix', value=np.eye(3))
+    orientation = CArray(shape=(3, 3), value=np.eye(3))
 
     #: The directivity of the source.
     directivity = Instance(Directivity)
