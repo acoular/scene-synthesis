@@ -18,26 +18,20 @@ class Trajectory(HasStrictTraits):
 
     Notes
     -----
-    The return values are normalized to the component-wise convention used by
-    the rest of scene-synthesis: ``[x, y, z]`` for scalar times and three
-    arrays ``[x(t), y(t), z(t)]`` for array-valued times.
+    Trajectory callables must return arrays describing 3D coordinates. Scalar
+    times must produce shape ``(3,)`` and array-valued times must produce shape
+    ``(3, N)``.
 
     Examples
     --------
     >>> import scene_synthesis as ss
-    >>> location = lambda t: np.stack(
-    ...     [np.asarray(t), np.zeros_like(t), np.ones_like(t)],
-    ...     axis=-1,
-    ... )
-    >>> velocity = lambda t: np.stack(
-    ...     [np.ones_like(t), np.zeros_like(t), np.zeros_like(t)],
-    ...     axis=-1,
-    ... )
+    >>> location = lambda t: np.array([t, 0.0 * t, 1.0 + 0.0 * t], dtype=float)
+    >>> velocity = lambda t: np.array([1.0 + 0.0 * t, 0.0 * t, 0.0 * t], dtype=float)
     >>> traj = ss.Trajectory(location=location, velocity=velocity)
     >>> traj.location(0.5)
-    [array(0.5), array(0.), array(1.)]
+    array([0.5, 0. , 1. ])
     >>> traj.velocity(0.5)
-    [array(1.), array(0.), array(0.)]
+    array([1., 0., 0.])
     """
 
     #: Time-dependent position function.
@@ -53,38 +47,29 @@ class Trajectory(HasStrictTraits):
     _velocity = Callable
 
     @staticmethod
-    def _normalize_output(value):
-        """Normalize trajectory outputs to three component arrays."""
-        if isinstance(value, (list, tuple)) and len(value) == 3:
-            return [np.asarray(component, dtype=float) for component in value]
-
+    def _validate_output_shape(value):
+        """Validate that trajectory outputs describe 3D coordinates."""
         array = np.asarray(value, dtype=float)
         if array.shape == (3,):
-            return [np.asarray(array[0]), np.asarray(array[1]), np.asarray(array[2])]
-        if array.ndim >= 2 and array.shape[-1] == 3:
-            return [np.asarray(array[..., 0]), np.asarray(array[..., 1]), np.asarray(array[..., 2])]
-        if array.ndim >= 1 and array.shape[0] == 3:
-            return [np.asarray(array[0, ...]), np.asarray(array[1, ...]), np.asarray(array[2, ...])]
+            return
+        if array.ndim == 2 and array.shape[0] == 3:
+            return
 
-        msg = f'Trajectory output must describe 3D coordinates, got shape {array.shape}.'
+        msg = f'Trajectory output must have shape (3,) or (3, N), got {array.shape}.'
         raise ValueError(msg)
 
     def _get_location(self):
-        return lambda t: self._normalize_output(self._location(t))
+        return self._location
 
     def _set_location(self, value):
-        if not callable(value):
-            msg = 'location must be callable.'
-            raise ValueError(msg)
+        self._validate_output_shape(value(0.0))
         self._location = value
 
     def _get_velocity(self):
-        return lambda t: self._normalize_output(self._velocity(t))
+        return self._velocity
 
     def _set_velocity(self, value):
-        if not callable(value):
-            msg = 'velocity must be callable.'
-            raise ValueError(msg)
+        self._validate_output_shape(value(0.0))
         self._velocity = value
 
 
@@ -112,9 +97,9 @@ class SplineTrajectory(Trajectory):
     ...     locations=[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
     ... )
     >>> trajectory.location(0.5)
-    [array(0.5), array(0.), array(0.)]
+    array([0.5, 0. , 0. ])
     >>> trajectory.velocity(0.5)
-    [array(1.), array(0.), array(0.)]
+    array([1., 0., 0.])
     """
 
     #: Sample times.
@@ -137,7 +122,21 @@ class SplineTrajectory(Trajectory):
         self._location_spline = make_interp_spline(self.times, self.locations, k=order, axis=0)
         self._velocity_spline = self._location_spline.derivative()
 
-        super().__init__(location=self._location_spline.__call__, velocity=self._velocity_spline.__call__)
+        super().__init__(location=self._location_callable, velocity=self._velocity_callable)
+
+    @staticmethod
+    def _evaluate_spline(spline, t):
+        """Return spline values using the trajectory output convention."""
+        values = np.asarray(spline(t), dtype=float)
+        if values.shape == (3,):
+            return values
+        return values.T
+
+    def _location_callable(self, t):
+        return self._evaluate_spline(self._location_spline, t)
+
+    def _velocity_callable(self, t):
+        return self._evaluate_spline(self._velocity_spline, t)
 
     def _validate_inputs(self):
         """Validate spline trajectory inputs."""

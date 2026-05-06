@@ -8,19 +8,19 @@ import scene_synthesis as ss
 def test_trajectory_accepts_independent_location_and_velocity_functions():
     """``Trajectory`` should allow independently defined position and velocity."""
     trajectory = ss.Trajectory(
-        location=lambda t: np.stack([np.asarray(t), np.zeros_like(t), np.ones_like(t)], axis=-1),
-        velocity=lambda t: np.stack([2 * np.ones_like(t), np.zeros_like(t), -np.ones_like(t)], axis=-1),
+        location=lambda t: np.array([t, 0.0 * t, 1.0 + 0.0 * t], dtype=float),
+        velocity=lambda t: np.array([2.0 + 0.0 * t, 0.0 * t, -1.0 + 0.0 * t], dtype=float),
     )
 
     np.testing.assert_allclose(np.array(trajectory.location(0.5)), np.array([0.5, 0.0, 1.0]))
     np.testing.assert_allclose(np.array(trajectory.velocity(0.5)), np.array([2.0, 0.0, -1.0]))
 
 
-def test_trajectory_normalizes_vectorized_outputs():
-    """``Trajectory`` should normalize vectorized 3D outputs."""
+def test_trajectory_accepts_vectorized_3d_outputs():
+    """``Trajectory`` should accept vectorized 3D outputs with shape ``(3, N)``."""
     trajectory = ss.Trajectory(
-        location=lambda t: np.stack([np.asarray(t), np.asarray(t) ** 2, np.ones_like(t)], axis=-1),
-        velocity=lambda t: np.stack([np.ones_like(t), 2 * np.asarray(t), np.zeros_like(t)], axis=-1),
+        location=lambda t: np.array([t, t**2, 1.0 + 0.0 * t], dtype=float),
+        velocity=lambda t: np.array([1.0 + 0.0 * t, 2.0 * t, 0.0 * t], dtype=float),
     )
 
     times = np.array([0.0, 1.0, 2.0])
@@ -34,12 +34,21 @@ def test_trajectory_normalizes_vectorized_outputs():
 def test_trajectory_accepts_integer_time_inputs():
     """``Trajectory`` should accept integer time inputs."""
     trajectory = ss.Trajectory(
-        location=lambda t: np.stack([np.asarray(t), np.zeros_like(t), np.ones_like(t)], axis=-1),
-        velocity=lambda t: np.stack([np.ones_like(t), np.zeros_like(t), np.zeros_like(t)], axis=-1),
+        location=lambda t: np.array([t, 0.0 * t, 1.0 + 0.0 * t], dtype=float),
+        velocity=lambda t: np.array([1.0 + 0.0 * t, 0.0 * t, 0.0 * t], dtype=float),
     )
 
     np.testing.assert_allclose(np.array(trajectory.location(1)), np.array([1.0, 0.0, 1.0]))
     np.testing.assert_allclose(np.array(trajectory.velocity(1)), np.array([1.0, 0.0, 0.0]))
+
+
+def test_trajectory_validates_location_shape_on_assignment():
+    """``Trajectory`` should reject location callables with invalid output shape."""
+    with pytest.raises(ValueError, match='Trajectory output must have shape'):
+        ss.Trajectory(
+            location=lambda t: np.asarray([0.0, 1.0]) + 0 * np.asarray(t),
+            velocity=lambda t: np.asarray([1.0, 0.0, 0.0]) + 0 * np.asarray(t),
+        )
 
 
 def test_spline_trajectory_location_matches_sampled_points():
