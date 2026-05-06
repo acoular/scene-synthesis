@@ -18,12 +18,13 @@ num = 150
 mics = ac.MicGeom()
 grid = ac.RectGrid(x_min=-1, x_max=1, y_min=-1, y_max=1, z=1)
 
-traj = ac.Trajectory(points={0: (-50, 0, 1), T: (50, 0, 1)})
+traj = synth.SplineTrajectory(times=[0.0, T], locations=[[-50.0, 0.0, 1.0], [50.0, 0.0, 1.0]])
 gen1 = ac.SineGenerator(freq=10, num_samples=ns, sample_freq=sf)
 gen2 = ac.SineGenerator(freq=1, num_samples=ns, sample_freq=sf, amplitude=0.5, phase=-np.pi / 2)
 
-mps1 = ac.MovingPointSource(signal=gen1, trajectory=traj, mics=mics)
-mps2 = ac.MovingPointSource(signal=gen2, trajectory=traj, mics=mics)
+ac_traj = ac.Trajectory(points={0: (-50, 0, 1), T: (50, 0, 1)})
+mps1 = ac.MovingPointSource(signal=gen1, trajectory=ac_traj, mics=mics)
+mps2 = ac.MovingPointSource(signal=gen2, trajectory=ac_traj, mics=mics)
 
 mix = ac.SourceMixer(sources=[mps1, mps2])
 
@@ -43,7 +44,7 @@ source2.trajectory = traj
 mic = synth.Microphone()
 
 scene = synth.Scene()
-scene.environment = ac.Environment()
+scene.environment = synth.Environment()
 scene.microphones = [mic]
 scene.sources = [source1, source2]
 

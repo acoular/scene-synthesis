@@ -1,10 +1,11 @@
 """Acoustic source definition and properties."""
 
 import numpy as np
-from acoular import SignalGenerator, Trajectory
+from acoular import SignalGenerator
 from traits.api import CArray, HasStrictTraits, Instance
 
 from scene_synthesis.directivities import Directivity
+from scene_synthesis.trajectory import Trajectory
 
 
 class Source(HasStrictTraits):
@@ -12,12 +13,15 @@ class Source(HasStrictTraits):
 
     Examples
     --------
-    Instantiate a simple source with a sine signal and a default trajectory:
+    Instantiate a simple source with a sine signal and a fixed trajectory:
 
-    >>> from acoular import SineGenerator, Trajectory
-    >>> from scene_synthesis.sources import Source
+    >>> from acoular import SineGenerator
+    >>> from scene_synthesis import Source, SplineTrajectory
     >>> signal = SineGenerator(freq=1000, sample_freq=44100, num_samples=44100)
-    >>> trajectory = Trajectory()
+    >>> trajectory = SplineTrajectory(
+    ...     times=[0.0, 1.0],
+    ...     locations=[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+    ... )
     >>> source = Source(signal=signal, trajectory=trajectory)
     """
 
@@ -38,7 +42,7 @@ class Source(HasStrictTraits):
     #: self.orientation[0] = right_vec
     #: self.orientation[1] = up_vec
     #: self.orientation[2] = forward_vec
-    orientation = CArray(shape=(3, 3), desc='source orientation matrix', value=np.eye(3))
+    orientation = CArray(shape=(3, 3), value=np.eye(3))
 
     #: The directivity of the source.
     directivity = Instance(Directivity)
