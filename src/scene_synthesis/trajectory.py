@@ -160,7 +160,7 @@ class SplineTrajectory(Trajectory):
         unique_locations = [sorted_locations[0]]
         for time, location in zip(sorted_times[1:], sorted_locations[1:], strict=True):
             if time == unique_times[-1]:
-                if not np.allclose(location, unique_locations[-1]):
+                if not np.array_equal(location, unique_locations[-1]):
                     msg = 'duplicate times must map to identical locations.'
                     raise ValueError(msg)
                 continue
