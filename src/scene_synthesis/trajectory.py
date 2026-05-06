@@ -2,7 +2,7 @@
 
 import numpy as np
 from scipy.interpolate import make_interp_spline
-from traits.api import Any, Array, Callable, HasStrictTraits, Property
+from traits.api import Array, Callable, HasStrictTraits, Property, cached_property
 
 
 class Trajectory(HasStrictTraits):
@@ -63,6 +63,7 @@ class Trajectory(HasStrictTraits):
 
     def _set_location(self, value):
         self._validate_output_shape(value(0.0))
+        self._validate_output_shape(value(np.array([0.0, 1.0])))
         self._location = value
 
     def _get_velocity(self):
@@ -70,6 +71,7 @@ class Trajectory(HasStrictTraits):
 
     def _set_velocity(self, value):
         self._validate_output_shape(value(0.0))
+        self._validate_output_shape(value(np.array([0.0, 1.0])))
         self._velocity = value
 
 
@@ -108,38 +110,26 @@ class SplineTrajectory(Trajectory):
     #: Sample locations with shape ``(N, 3)``.
     locations = Array(dtype=float)
 
-    #: Internal spline objects.
-    _location_spline = Any
-    _velocity_spline = Any
+    #: Sorted and deduplicated sample times.
+    prepared_times = Property(depends_on=['times', 'locations'])
 
-    def __init__(self, times, locations):
-        self.times = np.asarray(times, dtype=float)
-        self.locations = np.asarray(locations, dtype=float)
-        self._validate_inputs()
-        self._prepare_samples()
+    #: Sorted and deduplicated sample locations.
+    prepared_locations = Property(depends_on=['times', 'locations'])
 
-        order = min(3, self.times.size - 1)
-        self._location_spline = make_interp_spline(self.times, self.locations, k=order, axis=0)
-        self._velocity_spline = self._location_spline.derivative()
+    #: Time-dependent position function.
+    location = Property(depends_on=['times', 'locations'])
 
-        super().__init__(location=self._location_callable, velocity=self._velocity_callable)
+    #: Time-dependent velocity function.
+    velocity = Property(depends_on=['times', 'locations'])
 
-    @staticmethod
-    def _evaluate_spline(spline, t):
-        """Return spline values using the trajectory output convention."""
-        values = np.asarray(spline(t), dtype=float)
-        if values.shape == (3,):
-            return values
-        return values.T
+    #: Cached location spline.
+    _location_spline = Property(depends_on=['times', 'locations'])
 
-    def _location_callable(self, t):
-        return self._evaluate_spline(self._location_spline, t)
+    #: Cached velocity spline.
+    _velocity_spline = Property(depends_on=['times', 'locations'])
 
-    def _velocity_callable(self, t):
-        return self._evaluate_spline(self._velocity_spline, t)
-
-    def _validate_inputs(self):
-        """Validate spline trajectory inputs."""
+    def _prepared_samples(self):
+        """Return sorted samples with exact duplicate times merged."""
         if self.times.ndim != 1:
             msg = f'times must be a one-dimensional array, got shape {self.times.shape}.'
             raise ValueError(msg)
@@ -150,8 +140,6 @@ class SplineTrajectory(Trajectory):
             msg = f'locations must have shape ({self.times.size}, 3), got {self.locations.shape}.'
             raise ValueError(msg)
 
-    def _prepare_samples(self):
-        """Sort sample times and merge exact duplicate times with identical locations."""
         order = np.argsort(self.times)
         sorted_times = self.times[order]
         sorted_locations = self.locations[order]
@@ -167,9 +155,39 @@ class SplineTrajectory(Trajectory):
             unique_times.append(time)
             unique_locations.append(location)
 
-        self.times = np.asarray(unique_times, dtype=float)
-        self.locations = np.asarray(unique_locations, dtype=float)
-
-        if self.times.size < 2:
+        prepared_times = np.asarray(unique_times, dtype=float)
+        if prepared_times.size < 2:
             msg = 'times must contain at least two distinct samples.'
             raise ValueError(msg)
+
+        prepared_locations = np.asarray(unique_locations, dtype=float)
+        return prepared_times, prepared_locations
+
+    def _get_prepared_times(self):
+        return self._prepared_samples()[0]
+
+    def _get_prepared_locations(self):
+        return self._prepared_samples()[1]
+
+    @cached_property
+    def _get__location_spline(self):
+        order = min(3, self.prepared_times.size - 1)
+        return make_interp_spline(self.prepared_times, self.prepared_locations, k=order, axis=0)
+
+    @cached_property
+    def _get__velocity_spline(self):
+        return self._location_spline.derivative()
+
+    def _location_from_spline(self, t):
+        values = np.asarray(self._location_spline(t), dtype=float)
+        return values if values.shape == (3,) else values.T
+
+    def _velocity_from_spline(self, t):
+        values = np.asarray(self._velocity_spline(t), dtype=float)
+        return values if values.shape == (3,) else values.T
+
+    def _get_location(self):
+        return self._location_from_spline
+
+    def _get_velocity(self):
+        return self._velocity_from_spline

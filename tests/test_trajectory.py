@@ -94,14 +94,34 @@ def test_spline_trajectory_supports_vectorized_queries():
 
 def test_spline_trajectory_requires_at_least_two_times():
     """``SplineTrajectory`` should reject underspecified splines."""
+    trajectory = ss.SplineTrajectory(times=[0.0], locations=[[0.0, 0.0, 0.0]])
+
     with pytest.raises(ValueError, match='at least two samples'):
-        ss.SplineTrajectory(times=[0.0], locations=[[0.0, 0.0, 0.0]])
+        trajectory.location(0.0)
 
 
 def test_spline_trajectory_requires_matching_location_shape():
     """``SplineTrajectory`` should validate the shape of the sampled locations."""
+    trajectory = ss.SplineTrajectory(times=[0.0, 1.0], locations=[[0.0, 0.0], [1.0, 0.0]])
+
     with pytest.raises(ValueError, match='locations must have shape'):
-        ss.SplineTrajectory(times=[0.0, 1.0], locations=[[0.0, 0.0], [1.0, 0.0]])
+        trajectory.location(0.0)
+
+
+def test_spline_trajectory_requires_one_dimensional_times():
+    """``SplineTrajectory`` should reject non-one-dimensional time arrays."""
+    trajectory = ss.SplineTrajectory(times=[[0.0, 1.0]], locations=[[0.0, 0.0, 0.0]])
+
+    with pytest.raises(ValueError, match='times must be a one-dimensional array'):
+        trajectory.location(0.0)
+
+
+def test_spline_trajectory_requires_two_distinct_times():
+    """``SplineTrajectory`` should reject sample times that collapse to one instant."""
+    trajectory = ss.SplineTrajectory(times=[0.0, 0.0], locations=[[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+
+    with pytest.raises(ValueError, match='times must contain at least two distinct samples'):
+        trajectory.location(0.0)
 
 
 def test_spline_trajectory_sorts_and_deduplicates_times():
@@ -111,11 +131,13 @@ def test_spline_trajectory_sorts_and_deduplicates_times():
         locations=[[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [2.0, 0.0, 0.0]],
     )
 
-    np.testing.assert_allclose(trajectory.times, np.array([0.0, 1.0, 2.0]))
+    np.testing.assert_allclose(trajectory.prepared_times, np.array([0.0, 1.0, 2.0]))
     np.testing.assert_allclose(np.array(trajectory.location(1.0)), np.array([1.0, 0.0, 0.0]))
 
 
 def test_spline_trajectory_rejects_conflicting_duplicate_times():
     """``SplineTrajectory`` should reject duplicate times with conflicting locations."""
+    trajectory = ss.SplineTrajectory(times=[0.0, 0.0], locations=[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
+
     with pytest.raises(ValueError, match='duplicate times must map to identical locations'):
-        ss.SplineTrajectory(times=[0.0, 0.0], locations=[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
+        trajectory.location(0.0)
