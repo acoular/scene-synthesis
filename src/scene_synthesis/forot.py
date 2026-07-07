@@ -1,4 +1,5 @@
 """Frame of Reference over Time."""
+
 from abc import ABC, abstractmethod
 from typing import override
 
@@ -46,9 +47,7 @@ class Translation(FOROT):
         orientation_angles: ArrayLike = (0.0, 0.0, 0.0),
     ):
         self.origin_traj = origin_traj
-        self.orientation = ScipyRotation.from_euler(
-            'xyz', orientation_angles, degrees=True
-        )
+        self.orientation = ScipyRotation.from_euler('xyz', orientation_angles, degrees=True)
 
     @override
     def trajectory(self, x_local: ArrayLike) -> Trajectory:
@@ -76,23 +75,17 @@ class Rotation(FOROT):
         The axis around which to rotate.
     """
 
-    base = {
-        'x': np.array([1., 0., 0.]),
-        'y': np.array([0., 1., 0.]),
-        'z': np.array([0., 0., 1.])
-    }
+    base = {'x': np.array([1.0, 0.0, 0.0]), 'y': np.array([0.0, 1.0, 0.0]), 'z': np.array([0.0, 0.0, 1.0])}
 
     def __init__(
         self,
-        rev_per_sec: float=1.,
-        orientation_angles: ArrayLike=(0.,0.,0.),
-        origin: ArrayLike=(0.,0.,0.),
-        axis: str='z'
+        rev_per_sec: float = 1.0,
+        orientation_angles: ArrayLike = (0.0, 0.0, 0.0),
+        origin: ArrayLike = (0.0, 0.0, 0.0),
+        axis: str = 'z',
     ):
         self.origin = np.asarray(origin)
-        self.const_rotation = ScipyRotation.from_euler(
-            'xyz', orientation_angles, degrees=True
-        )
+        self.const_rotation = ScipyRotation.from_euler('xyz', orientation_angles, degrees=True)
         self.rev_per_sec = rev_per_sec
         self.axis = self.base[axis]
 
@@ -102,12 +95,11 @@ class Rotation(FOROT):
             self.rev_per_sec,
             self.origin + self.const_rotation.apply(x_local),
             self.const_rotation.apply(self.axis),
-            self.origin
+            self.origin,
         )
 
     @override
     def rigid_transform(self, t: float) -> RigidTransform:
         return RigidTransform.from_components(
-            self.origin,
-            self.const_rotation * ScipyRotation.from_rotvec(t * self.rev_per_sec * 2 * np.pi * self.axis)
+            self.origin, self.const_rotation * ScipyRotation.from_rotvec(t * self.rev_per_sec * 2 * np.pi * self.axis)
         )

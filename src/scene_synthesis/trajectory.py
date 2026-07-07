@@ -1,4 +1,5 @@
 """Frame of Reference over Time."""
+
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import Self, override
@@ -32,6 +33,7 @@ class Trajectory(ABC):
     def shift_by_offset(self, x_off: ArrayLike) -> Self:
         """Return a copy of this trajectory shifted in space by some const. 3D-offset."""
         ...
+
 
 class UniformLinearTrajectory(Trajectory):
     """Motion with constant speed."""
@@ -80,7 +82,6 @@ class SplineTrajectory(Trajectory):
     @override
     def velocity(self, t):
         return self._bspline_obj(t, nu=1).T
-
 
     @override
     def shift_by_offset(self, x_off):
@@ -141,8 +142,8 @@ class CircularTrajectory(Trajectory):
         t = t.flatten()
         return (
             self._center_point[:, np.newaxis]
-             + self._xc[:, np.newaxis] * np.cos(omega * t)
-             + self._xs[:, np.newaxis] * np.sin(omega * t)
+            + self._xc[:, np.newaxis] * np.cos(omega * t)
+            + self._xs[:, np.newaxis] * np.sin(omega * t)
         )
 
     @override
@@ -150,12 +151,9 @@ class CircularTrajectory(Trajectory):
         t = np.asarray(t)
         omega = self.rev_per_sec * 2 * np.pi
         if t.ndim == 0:
-            return omega * ( - self._xc * np.sin(omega * t) + self._xs * np.cos(omega * t))
+            return omega * (-self._xc * np.sin(omega * t) + self._xs * np.cos(omega * t))
         t = t.flatten()
-        return omega * (
-             - self._xc[:, np.newaxis] * np.sin(omega * t)
-             + self._xs[:, np.newaxis] * np.cos(omega * t)
-        )
+        return omega * (-self._xc[:, np.newaxis] * np.sin(omega * t) + self._xs[:, np.newaxis] * np.cos(omega * t))
 
     @override
     def shift_by_offset(self, x_off):
