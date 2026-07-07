@@ -1,8 +1,9 @@
 """Frame of Reference over Time."""
 from abc import ABC, abstractmethod
+from typing import override
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import ArrayLike
 from scipy.spatial.transform import RigidTransform
 from scipy.spatial.transform import Rotation as ScipyRotation
 
@@ -17,10 +18,14 @@ class FOROT(ABC):
     """
 
     @abstractmethod
-    def trajectory(self, x_local: ArrayLike) -> Trajectory: ...
+    def trajectory(self, x_local: ArrayLike) -> Trajectory:
+        """Get Trajectory of Point in this Reference Frame."""
+        ...
 
     @abstractmethod
-    def rigid_transform(self, t: float) -> RigidTransform: ...
+    def rigid_transform(self, t: float) -> RigidTransform:
+        """Get Spatial Transorm of this Reference Frame at time t."""
+        ...
 
 
 class Translation(FOROT):
@@ -45,16 +50,14 @@ class Translation(FOROT):
             'xyz', orientation_angles, degrees=True
         )
 
+    @override
     def trajectory(self, x_local: ArrayLike) -> Trajectory:
         shift = self.orientation.apply(x_local)
         return self.origin_traj.shift_by_offset(shift)
 
+    @override
     def rigid_transform(self, t: float) -> RigidTransform:
         return RigidTransform.from_components(self.origin_traj.location(t), self.orientation)
-
-    def partial_time_derivative(self, x_local: ArrayLike, t: float) -> NDArray:
-        # Derivative is independent of location in space.
-        return self.origin_traj.location(t, der=1)
 
 
 class Rotation(FOROT):
@@ -93,6 +96,7 @@ class Rotation(FOROT):
         self.rev_per_sec = rev_per_sec
         self.axis = self.base[axis]
 
+    @override
     def trajectory(self, x_local: ArrayLike) -> CircularTrajectory:
         return CircularTrajectory(
             self.rev_per_sec,
@@ -101,17 +105,9 @@ class Rotation(FOROT):
             self.origin
         )
 
+    @override
     def rigid_transform(self, t: float) -> RigidTransform:
         return RigidTransform.from_components(
             self.origin,
             self.const_rotation * ScipyRotation.from_rotvec(t * self.rev_per_sec * 2 * np.pi * self.axis)
         )
-
-    def partial_time_derivative(self, x_local: ArrayLike, t: float) -> NDArray:
-        # Derivative is 90° rotation from orignal location, without any translation
-        # Note: Untested!
-        omega = self.rev_per_sec * 2 * np.pi
-
-        rot = ScipyRotation.from_rotvec(t * omega + np.pi / 2 * self.axis)
-
-        return omega * self.const_rotation.apply(rot.apply(x_local))

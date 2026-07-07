@@ -1,7 +1,7 @@
 """Frame of Reference over Time."""
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import Self
+from typing import Self, override
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -48,18 +48,21 @@ class UniformLinearTrajectory(Trajectory):
         self.x0 = np.asarray(x0)
         self.v0 = np.asarray(v0)
 
+    @override
     def location(self, t):
         t = np.asarray(t)
         if t.ndim == 0:
             return self.x0 + t * self.v0
         return self.x0[:, np.newaxis] + t.flatten() * self.v0[:, np.newaxis]
 
+    @override
     def velocity(self, t):
         t = np.asarray(t)
         if t.ndim == 0:
             return self.v0
         return np.broadcast_to(self.v0, t.size + (3,)).T
 
+    @override
     def shift_by_offset(self, x_off):
         return UniformLinearTrajectory(self.x0 + x_off, self.v0)
 
@@ -70,13 +73,16 @@ class SplineTrajectory(Trajectory):
     def __init__(self, times, positions, *args, **kwargs):
         self._bspline_obj = make_interp_spline(times, positions, *args, **kwargs)
 
+    @override
     def location(self, t):
         return self._bspline_obj(t, nu=0).T
 
+    @override
     def velocity(self, t):
         return self._bspline_obj(t, nu=1).T
 
 
+    @override
     def shift_by_offset(self, x_off):
         cp = deepcopy(self)
         cp._bspline_obj.c += x_off
@@ -126,6 +132,7 @@ class CircularTrajectory(Trajectory):
         self._xc = ref_pos - self._center_point
         self._xs = np.cross(axis_dir, self._xc)
 
+    @override
     def location(self, t):
         t = np.asarray(t)
         omega = self.rev_per_sec * 2 * np.pi
@@ -138,6 +145,7 @@ class CircularTrajectory(Trajectory):
              + self._xs[:, np.newaxis] * np.sin(omega * t)
         )
 
+    @override
     def velocity(self, t):
         t = np.asarray(t)
         omega = self.rev_per_sec * 2 * np.pi
@@ -149,6 +157,7 @@ class CircularTrajectory(Trajectory):
              + self._xs[:, np.newaxis] * np.cos(omega * t)
         )
 
+    @override
     def shift_by_offset(self, x_off):
         cp = deepcopy(self)
         cp._center_point += x_off
