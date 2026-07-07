@@ -6,11 +6,12 @@ readme = "README.md"
 authors = [
     { name = "Art Pelling", email = "a.pelling@tu-berlin.de" }
 ]
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "acoular>=26.01",
     "matplotlib>=3.10.7",
     "pyqt6>=6.10.0",
+    "scipy>=1.16.0",
 ]
 
 [dependency-groups]
@@ -36,7 +37,7 @@ typeCheckingMode = 'off'
 
 [tool.uv.sources]
 #acoular = { path = "../acoular", editable =true }
-acoular = { git = "https://github.com/acoular/acoular", rev = "42992470402b5a63f6d88abe035c40baae448691" }
+#acoular = { git = "https://github.com/acoular/acoular", rev = "42992470402b5a63f6d88abe035c40baae448691" }
 
 [tool.pytest.ini_options]
 testpaths = "tests"

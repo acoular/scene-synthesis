@@ -6,3 +6,5 @@ from .environments import Environment as Environment
 from .microphones import Microphone as Microphone
 from .scene import Scene as Scene
 from .sources import Source as Source
+from .trajectory import CircularTrajectory, SplineTrajectory, UniformLinearTrajectory
+from .forot import Rotation, Translation
