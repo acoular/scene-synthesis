@@ -42,6 +42,9 @@ class Environment(HasStrictTraits):
     #: Speed of sound in the environment.
     c = Float(343.0)
 
+    #: Ambient density of the medium.
+    rho0 = Float(1.2041)
+
     #: Region of interest for calculations. Reserved for future use.
     roi = Union(None, CArray)
 

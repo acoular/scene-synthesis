@@ -5,4 +5,6 @@ from .directivities import OmniDirectivity as OmniDirectivity
 from .environments import Environment as Environment
 from .microphones import Microphone as Microphone
 from .scene import Scene as Scene
+from .sources import DipoleSource as DipoleSource
+from .sources import MonopoleSource as MonopoleSource
 from .sources import Source as Source

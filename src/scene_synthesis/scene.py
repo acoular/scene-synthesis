@@ -54,11 +54,13 @@ class Scene(HasStrictTraits):
         c = self.environment.c
         mic_loc = np.array(mic.location)
         relative_loc = source_loc - mic_loc
+        source_to_mic = mic_loc - source_loc
         source_pos = np.asarray(source_loc, dtype=float).reshape(3, -1)
         distance = float(np.asarray(self.environment.apparent_r(source_pos, mic_loc)).reshape(-1)[0])
         spread = float(np.asarray(self.environment.spread(source_pos, mic_loc)).reshape(-1)[0])
+        target_direction = source_to_mic / distance
         radial_mach = float(np.dot(source_vel, relative_loc / distance) / c) if source.conv_amp else 0.0
-        return distance, spread, radial_mach
+        return distance, spread, radial_mach, target_direction
 
     def result(self, num=128):
         """
@@ -134,6 +136,7 @@ class Scene(HasStrictTraits):
                     new_receiving_times_list: list[float] = []
                     new_spreads_list: list[float] = []
                     new_radial_machs_list: list[float] = []
+                    new_target_directions_list: list[np.ndarray] = []
                     last_size = sent_signal_size_matrix[source_id, mic_id]
 
                     while not new_receiving_times_list or new_receiving_times_list[-1] < interpolation_space.max():
@@ -143,31 +146,45 @@ class Scene(HasStrictTraits):
 
                         sending_time = (last_sending_step_matrix[source_id, mic_id] + step) / sample_freq
                         source_loc, source_vel = self._source_state(source, sending_time)
-                        distance, spread, radial_mach = self._propagation_sample(source, source_loc, source_vel, mic)
+                        distance, spread, radial_mach, target_direction = self._propagation_sample(
+                            source, source_loc, source_vel, mic
+                        )
                         time_delays = distance / c
                         receiving_time = sending_time + time_delays
 
                         new_receiving_times_list.append(float(receiving_time))
                         new_spreads_list.append(spread)
                         new_radial_machs_list.append(radial_mach)
+                        new_target_directions_list.append(target_direction)
 
                         step += 1
 
                     new_receiving_times = np.array(new_receiving_times_list, dtype=float)
                     new_spreads = np.array(new_spreads_list, dtype=float)
                     new_radial_machs = np.array(new_radial_machs_list, dtype=float)
+                    if new_target_directions_list:
+                        new_target_directions = np.array(new_target_directions_list, dtype=float).T
+                    else:
+                        new_target_directions = np.empty((3, 0), dtype=float)
 
                     last_sending_step_matrix[source_id, mic_id] += step
 
-                    # Fetch new signal samples for this iteration
-                    signal = source.signal.signal()[last_size : last_size + new_receiving_times.size]
+                    # Fetch local source strength samples for this iteration.
+                    # Always use ``local_strength`` instead of the raw signal so
+                    # source-specific radiation laws and frequency-dependent
+                    # transformations are applied before propagation.
+                    local_strength = source.local_strength(self.environment)[last_size : last_size + new_receiving_times.size]
+                    direction_factor = source.direction_factor(new_target_directions)
                     sent_signal_size_matrix[source_id, mic_id] += new_receiving_times.size
 
-                    # Apply geometric spreading from the environment and
-                    # Doppler effect correction.
-                    # Something about the normalization factor of 4 pi is wrong.
-                    # Probably has something to do with the radial Mach number.
-                    new_squished_signal = signal * new_spreads / np.square(1 - new_radial_machs)  # / 4 / np.pi
+                    # Apply source directivity, geometric spreading from the
+                    # environment, and Doppler effect correction.
+                    new_squished_signal = (
+                        local_strength
+                        * direction_factor
+                        * new_spreads
+                        / np.square(1 - new_radial_machs)
+                    )
 
                     # Combine carry-over tail from previous block with newly generated samples.
                     prev_times = carry_receiving_times[source_id][mic_id]
